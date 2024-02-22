@@ -165,3 +165,5 @@ ws/logs
 ws/build
 ws/src/CMakeLists.txt
 ws/.*
+
+bags/
