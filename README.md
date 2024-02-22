@@ -23,11 +23,12 @@ that you start from the Codespaces' terminal (like `rviz`) will open in the remo
 
 Your environment (called a *devcontainer*) is based on [ROS
 noetic](http://wiki.ros.org/noetic). It already contains almost all the standard
-ROS tools that we need. We only add the `catkin` command-line tool:
+ROS tools that we need. Let's add a couple of additional packages required for
+this tutorial:
 
 ```
 sudo apt update
-sudo apt install wget python3-pip python3-catkin-tools
+sudo apt install evince python3-graphviz wget python3-pip python3-catkin-tools
 ```
 
 Next, we create a basic ROS *workspace*, so that we can compile ROS nodes:
@@ -280,3 +281,36 @@ rosdep install -r -y --from-paths src
 catkin build hri_person_manager
 ```
 
+Source again `install/setup.bash`, configure some general parameters (needed
+because we are using a webcam, not an actual robot, [check the doc](https://github.com/ros4hri/hri_person_manager?tab=readme-ov-file#hri_person_manager) to know more), and start
+`hri_person_manager`:
+
+```
+source install/setup.bash
+rosparam set /humans/reference_frame head_camera
+rosparam set /humans/robot_reference_frame head_camera
+rosrun hri_person_manager hri_person_manager
+```
+
+If the face and body detector are still running, you might see that
+`hri_person_manager` is already creating some *anonymous* persons: the node
+knows that some persons must exist (since faces and bodies are detected), but it
+does not know *who* these persons are.
+
+For that, we need a node able to match for instance a *face* to a unique and
+stable *person*: a face identification node.
+
+### 'Manual' face identification
+
+Before doing it automatically with a dedicated node, let's do it manually, to
+understand how this work.
+
+### Installing and running automatic face identification
+
+### Probabilistic feature matching
+
+The algorithm used by `hri_person_manager` exploits the probabilities of *match*
+between each and all personal features perceived by the robot to find the most
+likely set of *partitions* of features into persons.
+
+If you want to know more about the exact algorithm, [check the 'Mr Potato' paper!](https://academia.skadge.org/publis/lemaignan2024probabilistic.pdf).
