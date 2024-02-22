@@ -1,5 +1,5 @@
 {
-    "image": "osrf/ros:noetic-desktop",
+    "dockerFile": "Dockerfile",
     "forwardPorts": [
         6080
     ],
@@ -18,6 +18,8 @@
     "containerEnv": {
         "LIBGL_ALWAYS_SOFTWARE": "1"
     },
+
+    "postStartCommand": "source /opt/ros/noetic/setup.bash; cd ws && rosdep install -r -y --from-paths src && catkin init && catkin config --install && catkin build",
 
     // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
     "customizations": {

@@ -1,0 +1,9 @@
+[submodule "ws/src/hri_face_detect"]
+	path = ws/src/hri_face_detect
+	url = https://github.com/ros4hri/hri_face_detect.git
+[submodule "ws/src/hri_fullbody"]
+	path = ws/src/hri_fullbody
+	url = https://github.com/ros4hri/hri_fullbody/
+[submodule "ws/src/hri_person_manager"]
+	path = ws/src/hri_person_manager
+	url = https://github.com/ros4hri/hri_person_manager.git
