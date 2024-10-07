@@ -6,7 +6,7 @@ Start the Github Codespaces by clicking on `Code`, then `Codespaces`.
 
 ### Connect to the remote desktop
 
-![Port forwarding](images/vscode-ports.png)
+![Port forwarding](../images/vscode-ports.png)
 
 In the Codespaces' VSCode interface, click on the `PORTS` tab (next to
 `TERMINAL`), and click on the *Forwarded Address* URL next to the `6080` port forward. Click on the
@@ -112,7 +112,7 @@ Switch to the remote desktop tab. You should see the RQT `image_view`
 interface. Select the `/usb_cam/image_raw` topic in the drop-down list. It
 should display the video stream.
 
-![rqt_image_view](images/rqt_image_view.png)
+![rqt_image_view](../images/rqt_image_view.png)
 
 We can alos visualize the bag file in `rviz`, the main ROS tool for data
 visualization. Stop `rqt_image_view` (either close the window, or press Ctrl+C
@@ -125,7 +125,7 @@ rviz
 *Add* an `Image` plugin, and select the `/usb_cam/image_raw` topic like on the
 screenshot below:
 
-![rviz](images/rviz.png)
+![rviz](../images/rviz.png)
 
 
 ## Face detection
@@ -191,12 +191,12 @@ rostopic echo /humans/faces/tracked
 We can also use `rviz` to display the faces with the facial landmarks.
 Then, in `rviz`, set the fixed frame to `head_camera`, and enable the `Humans` and TF plugins:
 
-![rviz human plugin](images/rviz-humans-plugin.png)
+![rviz human plugin](../images/rviz-humans-plugin.png)
 
 Configure the `Humans` plugin to use the `/usb_cam/image_raw` topic. You should see the
 face being displayed, as well as its estimated 6D position:
 
-![rviz displaying faces](images/rviz-faces.png)
+![rviz displaying faces](../images/rviz-faces.png)
 
 We are effectively running the face detector in a Docker container, running in a virtual machine somewhere in a Github datacentre!
 
@@ -252,13 +252,13 @@ roslaunch hri_fullbody hri_fullbody.launch rgb_camera:=usb_cam
 Re-open the browser tab with `rviz`: you should now see the skeleton being
 detected, in addition to the face:
 
-![Body and face, visualised in rviz](images/body-face.png)
+![Body and face, visualised in rviz](../images/body-face.png)
 
 ## 'Assembling' full persons
 
 Now that we have a face and a body, we can build a 'full' person.
 
-![ROS4HRI IDs](images/ros4hri-ids.png)
+![ROS4HRI IDs](../images/ros4hri-ids.png)
 
 Until now, we were running two ROS4HRI perception module: `hri_face_detect` and
 `hri_fullbody`.
@@ -329,7 +329,7 @@ In a different terminal, run:
 
 You should see a graph similar to:
 
-![ROS4HRI graph](images/ros4hri-graph.png)
+![ROS4HRI graph](../images/ros4hri-graph.png)
 
 ### Connecting the person feature graph
 
@@ -346,7 +346,7 @@ rostopic pub /humans/candidate_matches hri_msgs/IdsMatch "{id1: 'rlkas', id1_typ
 
 The graph updates to:
 
-![ROS4HRI graph](images/ros4hri-graph-2.png)
+![ROS4HRI graph](../images/ros4hri-graph-2.png)
 
 > ⚠️  do not forget to change the face and body IDs to match the ones in your system!
 
@@ -367,7 +367,7 @@ rostopic pub /humans/candidate_matches hri_msgs/IdsMatch "{id1: 'rlkas', id1_typ
 
 The graph updates to:
 
-![ROS4HRI graph](images/ros4hri-graph-3.png)
+![ROS4HRI graph](../images/ros4hri-graph-3.png)
 
 Know that the person is 'known' (ie, at least one person 'part' is associated to
 a person ID)m the automatically-generated 'anonymous' person is replaced by the
@@ -415,7 +415,7 @@ likely set of *partitions* of features into persons.
 For instance, from the following graph, try to guess which are the most likely
 'person' associations:
 
-![complex ROS4HRI graph](images/ex1.png)
+![complex ROS4HRI graph](../images/ex1.png)
 
 Response in the paper (along with the exact algorithm!): [the 'Mr Potato' paper](https://academia.skadge.org/publis/lemaignan2024probabilistic.pdf).
 
