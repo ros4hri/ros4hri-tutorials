@@ -15,6 +15,10 @@ application templates, and a LLM backend.
 ![Social interaction simulator](../images/social-interaction-simulator.jpg)
 
 
+**Note: the content on this page is not final, and will be updated before the
+tutorial day.**
+
+
 ## Face detection
 
 ### Install hri_face_detect
