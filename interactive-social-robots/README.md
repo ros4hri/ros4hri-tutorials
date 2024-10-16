@@ -45,11 +45,11 @@ docker pull palrobotics/public-tutorials-alum-devel
 Then, run the container, with access to your webcam and your X server.
 
 ```sh
-docker run -it --rm --name ros4hri \
-                    --device /dev/video0:/dev/video0 \
-                    -e DISPLAY=$DISPLAY \
-                    -v /tmp/.X11-unix:/tmp/.X11-unix \
-                    palrobotics/public-tutorials-alum-devel bash
+docker run -it --name ros4hri \
+               --device /dev/video0:/dev/video0 \
+               -e DISPLAY=$DISPLAY \
+               -v /tmp/.X11-unix:/tmp/.X11-unix \
+               palrobotics/public-tutorials-alum-devel bash
 ```
 
 > 💡 The `--device` option is used to pass the webcam to the container, and the
@@ -64,12 +64,12 @@ container, to share files between the two environments:
 
 ```sh
 mkdir ros4hri-exchange
-docker run -it --rm --name ros4hri \
-                    --device /dev/video0:/dev/video0 \
-                    -e DISPLAY=$DISPLAY \
-                    -v /tmp/.X11-unix:/tmp/.X11-unix \
-                    -v `pwd`/ros4hri-exchange:/home/user/exchange \
-                    palrobotics/public-tutorials-alum-devel bash
+docker run -it --name ros4hri \
+               --device /dev/video0:/dev/video0 \
+               -e DISPLAY=$DISPLAY \
+               -v /tmp/.X11-unix:/tmp/.X11-unix \
+               -v `pwd`/ros4hri-exchange:/home/user/exchange \
+               palrobotics/public-tutorials-alum-devel bash
 ```
 
 ## Face detection
@@ -87,7 +87,10 @@ ros2 launch usb_cam camera.launch.py
 
 You can open `rqt` to check that the images are indeed published:
 
-> 💡 if you want to open another Docker terminal, run `docker exec -it -u user ros4hri bash`.
+> 💡 if you want to open another Docker terminal, run
+> ```sh
+> docker exec -it -u user ros4hri bash
+> ```
 
 ```bash
 rqt
@@ -159,6 +162,7 @@ $ ros2 launch hri_face_detect face_detect.launch.py
 > to simplify the management of ROS 2 nodes configuration.
 >
 > See for instance the [launch file of `hri_face_detect`](https://github.com/ros4hri/hri_face_detect/blob/humble-devel/launch/face_detect.launch.py#L31)
+> to understand how it is used.
 
 You should immediately see on the console that some faces are indeed detected
 (if not, try restart the `usb_cam` node: ROS 2 sometimes struggles with large
@@ -166,15 +170,33 @@ messages like images).
 
 Let's visualise them:
 
-1. start the `hri_visualisation` node:
+1. start the `hri_visualization` node:
+
+First, configure the remapping:
 
 ```sh
-ros2 launch hri_visualisation hri_visualisation.launch.py
+nano $HOME/.pal/config/ros4hri-tutorials.yml
+```
+
+Then, add the following content at the bottom:
+
+```yaml
+/hri_visualization:
+   remappings:
+      image: /camera1/image_raw
+```
+
+Then:
+
+```sh
+ros2 launch hri_visualization hri_visualization.launch.py
 ```
 
 2. in `rqt`, change the topic of the `Image View` plugin to
    `/camera1/image_raw/hri_overlay`. You should now see your face, overlaid with
    facial key points.
+
+**TODO**: add a screenshot here
 
 3. open a new Docker terminal, and launch `rviz`:
 
@@ -223,6 +245,5 @@ Here a few additional tasks you might want to try, to further explore ROS4HRI:
   approach consists in computing the overlap of the regions of interest of pairs
   of (face, body), and compute a likelihood based on that.
 
-  Check the [`pyhri` API documentation](https://pyhri.readthedocs.io/en/latest/)
-  here, and the [C++ `libhri` API
-  documentation](http://docs.ros.org/en/noetic/api/hri/html/c++/) here.
+  Check the [C++ `libhri` API
+  documentation](http://docs.ros.org/en/humble/p/hri/) here.
