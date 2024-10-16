@@ -64,6 +64,7 @@ For convenience, you can also mount a folder on your host machine to the
 container, to share files between the two environments:
 
 ```sh
+xhost +
 mkdir ros4hri-exchange
 docker run -it --name ros4hri \
                --device /dev/video0:/dev/video0 \
@@ -103,7 +104,7 @@ Then, in the `Plugins` menu, select `Image View`, and choose the topic
 
 ![rqt image view](images/rqt-image-view.jpg)
 
-### Start the face detection node
+### Face detection
 
 [`hri_face_detect`](https://github.com/ros4hri/hri_face_detect) is an
 open-source ROS 1/ROS 2 node, compatible with ROS4HRI, that detects faces in images.
@@ -194,10 +195,10 @@ ros2 launch hri_visualization hri_visualization.launch.py
 ```
 
 2. in `rqt`, change the topic of the `Image View` plugin to
-   `/camera1/image_raw/hri_overlay`. You should now see your face, overlaid with
-   facial key points.
+   `/camera1/image_raw/hri_overlay`. You should now see your face, in a nice
+   frame:
 
-**TODO**: add a screenshot here
+![rqt showing a face with recognized emotion](images/hri_visualization.jpg.jpg)
 
 3. open a new Docker terminal, and launch `rviz`:
 
@@ -216,17 +217,40 @@ a 3D frame, representing the face position and orientation of your face.
 > configured with the _raw_ image topic `/camera1/imnage_raw`, it should
 > display an image similar to the one in `rqt`.
 
+
+## Building a social robot architecture
+
+### Using the interaction simulator
+
+Instead of running nodes manually, we are now going to use our so-called *interaction simulator*:
+
+![Social interaction simulator](images/interaction_sim.jpg)
+
+The interaction simulator starts the following nodes:
+
+The previous three:
+- `usb_cam` to publish images from the webcam
+- `hri_face_detect` to detect faces in the images
+- `hri_visualization` to display the detected faces
+
+And the following new nodes:
+- `hri_emotion_recognizer`, to recognize emotions on the detected faces
+- `attention_manager`, that decides where to look based on the where the faces are
+- `expressive_eyes`, that procedurally generates the robot's face and moves the eyes
+- `communication_hub`, that manages the dialogues with the user (user input speech, and robot output speech)
+- `knowledge_core`, an open-source OWL/RDF-based knowledge base
+
+Finally, it launches `rqt` with several plugins
+
 > **➡️ to go further**
 >
-> In today's tutorial, we will not go further with exploring the ROS4HRI tools
+> In today's tutorial, we will not go much further with exploring the ROS4HRI tools
 > and nodes. However, you can find more information:
 > - on the [ROS4HRI](https://wiki.ros.org/hri) wiki page
 > - in the ROS4HRI (ROS 1) tutorial [here](../intro-ros4hri-devcontainers/)
 >
 > You can also check the [ROS4HRI Github organisation](https://github.com/ros4hri/)
 > and the [original paper](https://academia.skadge.org/publis/mohamed2021ros4hri.pdf).
-
-## Building a social robot architecture
 
 
 ## The app supervisors and ROS Intents
