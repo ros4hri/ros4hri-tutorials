@@ -198,7 +198,7 @@ ros2 launch hri_visualization hri_visualization.launch.py
    `/camera1/image_raw/hri_overlay`. You should now see your face, in a nice
    frame:
 
-![rqt showing a face with recognized emotion](images/hri_visualization.jpg.jpg)
+![rqt showing a face with recognized emotion](images/hri_visualization.jpg)
 
 3. open a new Docker terminal, and launch `rviz`:
 
