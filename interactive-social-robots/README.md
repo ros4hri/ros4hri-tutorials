@@ -39,19 +39,32 @@ docker pull palrobotics/public-tutorials-alum-devel
 
 Then, run the container, with access to your webcam and your X server.
 
-```
-docker run -it --rm --name ros4hri --device /dev/video0:/dev/video0 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix palrobotics/public-tutorials-alum-devel bash
+```sh
+> docker run -it --rm --name ros4hri \
+                    --device /dev/video0:/dev/video0 \
+                    -e DISPLAY=$DISPLAY \
+                    -v /tmp/.X11-unix:/tmp/.X11-unix \
+                    palrobotics/public-tutorials-alum-devel bash
 ```
 
 > **Note**: The `--device` option is used to pass the webcam to the container, and the
 > `-e: DISPLAY` and `-v /tmp/.X11-unix:/tmp/.X11-unix` options are used to display
 > graphical applications on your screen.
 
+
+### Share files between host and docker container
+
 For convenience, you can also mount a folder from your host machine to the
 container, to share files between the two environments:
 
-```
-docker run -it --rm --name ros4hri --device /dev/video0:/dev/video0 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /path/to/your/folder:/exchange palrobotics/public-tutorials-alum-devel bash
+```sh
+> mkdir ros4hri-exchange
+> docker run -it --rm --name ros4hri \
+                    --device /dev/video0:/dev/video0 \
+                    -e DISPLAY=$DISPLAY \
+                    -v /tmp/.X11-unix:/tmp/.X11-unix \
+                    -v `pwd`/ros4hri-exchange:/home/user/exchange \
+                    palrobotics/public-tutorials-alum-devel bash
 ```
 
 ## Face detection
