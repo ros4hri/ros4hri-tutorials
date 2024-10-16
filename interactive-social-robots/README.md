@@ -54,7 +54,7 @@ docker run -it --rm --name ros4hri \
 
 ### Share files between host and docker container
 
-For convenience, you can also mount your home folder to the
+For convenience, you can also mount a folder on your host machine to the
 container, to share files between the two environments:
 
 ```sh
@@ -63,7 +63,7 @@ docker run -it --rm --name ros4hri \
                     --device /dev/video0:/dev/video0 \
                     -e DISPLAY=$DISPLAY \
                     -v /tmp/.X11-unix:/tmp/.X11-unix \
-                    -v $HOST:/home/user \
+                    -v `pwd`/ros4hri-exchange:/home/user/exchange \
                     palrobotics/public-tutorials-alum-devel bash
 ```
 
@@ -90,28 +90,77 @@ You can open `rqt` to check that the images are indeed published:
 rqt
 ```
 
-Then, in the `Plugins` menu, select `Image View`:
+Then, in the `Plugins` menu, select `Image View`, and choose the topic
+`/came1/image_raw`:
 
 
 ![rqt image view](../images/rqt-image-view.jpg)
 
 ### Start the face detection node
 
-The `hri_face_detect` node has been installed in the `install/` subfolder. We
-need to tell ROS to look into that folder when starting a node. Type:
+[`hri_face_detect`](https://github.com/ros4hri/hri_face_detect) is an
+open-source ROS 1/ROS 2 node, compatible with ROS4HRI, that detects faces in images.
 
-```
-source ./install/setup.bash
-```
+It is already installed in the Docker container.
 
-Then, you can start the face detection node, remapping the default image topic
-to the one actually published by the camera:
+By default, `hri_face_detect` expect images on `/image` topic: before starting the node, we need to configure topic remapping:
 
-```
-roslaunch hri_face_detect detect.launch rgb_camera:=usb_cam filtering_frame:=head_camera
+```sh
+mkdir -p $HOME/.pal/config
+nano $HOME/.pal/config/ros4hri-tutorials.yml
 ```
 
-You should immediately see on the console that some faces are indeed detected.
+Then, paste the following content:
+
+```yaml
+/hri_face_detect:
+   remappings:
+      image: /camera1/image_raw
+      camera_info: /camera1/camera_info
+```
+
+Then, you can launch the node:
+
+```sh
+ros2 launch hri_face_detect face_detect.launch.py
+```
+
+You should see on your console *which* configuration files are used:
+
+```
+$ ros2 launch hri_face_detect face_detect.launch.py 
+[INFO] [launch]: All log files can be found below /home/user/.ros/log/2024-10-16-12-39-10-518981-536d911a0c9c-203
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: Loaded configuration for <hri_face_detect>:
+- System configuration (from lower to higher precedence):
+	- /opt/pal/alum/share/hri_face_detect/config/00-defaults.yml
+- User overrides (from lower to higher precedence):
+	- /home/user/.pal/config/ros4hri-tutorials.yml
+[INFO] [launch.user]: Parameters:
+- processing_rate: 30
+- confidence_threshold: 0.75
+- image_scale: 0.5
+- face_mesh: True
+- filtering_frame: camera_color_optical_frame
+- deterministic_ids: False
+- debug: False
+[INFO] [launch.user]: Remappings:
+- image -> /camera1/image_raw
+- camera_info -> /camera1/camera_info
+[INFO] [face_detect-1]: process started with pid [214]
+...
+```
+
+> 💡 this way of managing launch parameters and remapping is not part of base
+> ROS 2: it is an extension (available in ROS humble) provided by PAL Robotics
+> to simplify the management of ROS 2 nodes configuration.
+>
+> See for instance the [launch file of `hri_face_detect`](https://github.com/ros4hri/hri_face_detect/blob/humble-devel/launch/face_detect.launch.py#L31)
+
+You should immediately see on the console that some faces are indeed detected
+(if not, try restart the `usb_cam` node: ROS 2 sometimes struggles with large
+messages like images).
+
 Let's visualise them.
 
 
