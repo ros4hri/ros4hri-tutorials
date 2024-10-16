@@ -209,19 +209,22 @@ Instead of running nodes manually, we are now going to use our so-called *intera
 
 The interaction simulator starts the following nodes:
 
-The previous three:
+The previous two:
 - `usb_cam` to publish images from the webcam
-- `hri_face_detect` to detect faces in the images
-- `hri_visualization` to display the detected faces
+- [`hri_face_detect`](https://github.com/ros4hri/hri_face_detect) to detect faces in images
 
 And the following new nodes:
-- `hri_emotion_recognizer`, to recognize emotions on the detected faces
+- [`hri_person_manager`](https://github.com/ros4hri/hri_visualization), to 'combine' faces, bodies, voices into full persons
+- [`hri_emotion_recognizer`](https://github.com/ros4hri/hri_emotion_recognizer), to recognize emotions on the detected faces
 - `attention_manager`, that decides where to look based on the where the faces are
 - `expressive_eyes`, that procedurally generates the robot's face and moves the eyes
 - `communication_hub`, that manages the dialogues with the user (user input speech, and robot output speech)
-- `knowledge_core`, an open-source OWL/RDF-based knowledge base
+- [`knowledge_core`](https://github.com/severin-lemaignan/knowledge_core), an open-source OWL/RDF-based knowledge base
+- [`hri_visualization`](https://github.com/ros4hri/hri_visualization) to generate a camera image overlay with the faces, bodies, emotions, etc
 
-Finally, it launches `rqt` with several plugins
+Finally, it launches `rqt` with several plugins:
+
+**TODO**
 
 > **➡️ to go further**
 >
