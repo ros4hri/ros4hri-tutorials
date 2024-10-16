@@ -185,8 +185,6 @@ rviz2
    You can also find the plugin as one of those available 
    for the `/camera1/image_raw` topic.
 
-   ![rviz Humans plugin](../images/rviz-humans-plugin.png)
-
 3. In `rviz`, enable the `tf` plugin, and set the fixed frame to `camera`. 
    You should now see a 3D frame, representing the face position and orientation of your face.
 
@@ -194,9 +192,7 @@ rviz2
 ![rviz showing a 3D face frame](images/rviz-face.jpg)
 
 
-> 💡 on the above screenshot, the `Humans` plugin has also been added: once
-> configured with the _raw_ image topic `/camera1/imnage_raw`, it should
-> display an image similar to the one in `rqt`.
+> 💡 on the above screenshot, the `Humans` plugin has also been added.
 
 
 ## Building a social robot architecture
