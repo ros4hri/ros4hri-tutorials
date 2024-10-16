@@ -45,6 +45,7 @@ docker pull palrobotics/public-tutorials-alum-devel
 Then, run the container, with access to your webcam and your X server.
 
 ```sh
+xhost +
 docker run -it --name ros4hri \
                --device /dev/video0:/dev/video0 \
                -e DISPLAY=$DISPLAY \
