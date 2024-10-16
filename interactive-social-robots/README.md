@@ -18,6 +18,41 @@ application templates, and a LLM backend.
 **Note: the content on this page is not final, and will be updated before the
 tutorial day.**
 
+## Pre-requisites
+
+To follow 'hands-on' the tutorial, you will need to be able to run a Docker
+container on your machine, with access to a X server (to display graphical
+applications like `rviz` and `rqt`). We will also use the webcam of your
+computer.
+
+Any recent Linux distribution should work, as well as MacOS (with XQuartz
+installed).
+
+
+## Preparing your environment
+
+Fetch the `PAL tutorials` public Docker image:
+
+```
+docker pull palrobotics/public-tutorials-alum-devel
+```
+
+Then, run the container, with access to your webcam and your X server.
+
+```
+docker run -it --rm --name ros4hri --device /dev/video0:/dev/video0 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix palrobotics/public-tutorials-alum-devel bash
+```
+
+> **Note**: The `--device` option is used to pass the webcam to the container, and the
+> `-e: DISPLAY` and `-v /tmp/.X11-unix:/tmp/.X11-unix` options are used to display
+> graphical applications on your screen.
+
+For convenience, you can also mount a folder from your host machine to the
+container, to share files between the two environments:
+
+```
+docker run -it --rm --name ros4hri --device /dev/video0:/dev/video0 -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /path/to/your/folder:/exchange palrobotics/public-tutorials-alum-devel bash
+```
 
 ## Face detection
 
