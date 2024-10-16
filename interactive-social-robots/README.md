@@ -94,7 +94,7 @@ Then, in the `Plugins` menu, select `Image View`, and choose the topic
 `/came1/image_raw`:
 
 
-![rqt image view](../images/rqt-image-view.jpg)
+![rqt image view](images/rqt-image-view.jpg)
 
 ### Start the face detection node
 
@@ -161,8 +161,34 @@ You should immediately see on the console that some faces are indeed detected
 (if not, try restart the `usb_cam` node: ROS 2 sometimes struggles with large
 messages like images).
 
-Let's visualise them.
+Let's visualise them:
 
+1. start the `hri_visualisation` node:
+
+```sh
+ros2 launch hri_visualisation hri_visualisation.launch.py
+```
+
+2. in `rqt`, change the topic of the `Image View` plugin to
+   `/camera1/image_raw/hri_overlay`. You should now see your face, overlaid with
+   facial key points.
+
+3. open a new Docker terminal, and launch `rviz`:
+
+```sh
+rviz2
+```
+
+Enable the `tf` plugin, and set the fixed frame to `camera`. You should now see
+a 3D frame, representing the face position and orientation of your face.
+
+
+![rviz showing a 3D face frame](images/rviz-face.jpg)
+
+
+> 💡 on the above screenshot, the `Humans` plugin has also been added: once
+> configured with the _raw_ image topic `/camera1/imnage_raw`, it should
+> display an image similar to the one in `rqt`.
 
 #### Visualise the result
 
