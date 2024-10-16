@@ -1,5 +1,10 @@
 # From Zero to an Interactive Social Robot using ROS4HRI and LLMs
 
+> **‼️ this is a ROS 2 tutorial**
+>
+> For ROS 1, you can check a similar tutorial
+> [here](../intro-ros4hri-devcontainers/)
+
 Welcome!
 
 This tutorial will guide you through the installation and use of the ROS4HRI

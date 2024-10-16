@@ -1,5 +1,11 @@
 # Getting started with ROS4HRI using devcontainers
 
+> **‼️ this is a ROS 1 tutorial**
+>
+> While the concepts and tools presented here are still relevant, the code
+> examples are using ROS 1 (Noetic). If you are looking for a ROS 2 tutorial,
+> please check the [ROS 2 tutorial](../interactive-social-robots/).
+
 ## Start the GitHub Codespaces
 
 Start the Github Codespaces by clicking on `Code`, then `Codespaces`.
