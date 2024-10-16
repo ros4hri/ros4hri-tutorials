@@ -172,42 +172,23 @@ messages like images).
 
 Let's visualise them:
 
-1. start the `hri_visualization` node:
-
-First, configure the remapping:
-
-```sh
-nano $HOME/.pal/config/ros4hri-tutorials.yml
-```
-
-Then, add the following content at the bottom:
-
-```yaml
-/hri_visualization:
-   remappings:
-      image: /camera1/image_raw
-```
-
-Then:
-
-```sh
-ros2 launch hri_visualization hri_visualization.launch.py
-```
-
-2. in `rqt`, change the topic of the `Image View` plugin to
-   `/camera1/image_raw/hri_overlay`. You should now see your face, in a nice
-   frame:
-
-![rqt showing a face with recognized emotion](images/hri_visualization.jpg)
-
-3. open a new Docker terminal, and launch `rviz`:
+1. start `rviz2`:
 
 ```sh
 rviz2
 ```
 
-Enable the `tf` plugin, and set the fixed frame to `camera`. You should now see
-a 3D frame, representing the face position and orientation of your face.
+2. In `rviz`, visualize the detected faces enabling the `Humans` plugin,
+   which you can find in the `hri_rviz` plugins group. The plugin setup
+   requires you to specify the image stream you want to use to visualize the
+   detection results, in this case `/camera1/image_raw`.
+   You can also find the plugin as one of those available 
+   for the `/camera1/image_raw` topic.
+
+   ![rviz Humans plugin](../images/rviz-humans-plugin.png)
+
+3. In `rviz`, enable the `tf` plugin, and set the fixed frame to `camera`. 
+   You should now see a 3D frame, representing the face position and orientation of your face.
 
 
 ![rviz showing a 3D face frame](images/rviz-face.jpg)
