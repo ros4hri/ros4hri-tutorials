@@ -40,30 +40,30 @@ docker pull palrobotics/public-tutorials-alum-devel
 Then, run the container, with access to your webcam and your X server.
 
 ```sh
-> docker run -it --rm --name ros4hri \
+docker run -it --rm --name ros4hri \
                     --device /dev/video0:/dev/video0 \
                     -e DISPLAY=$DISPLAY \
                     -v /tmp/.X11-unix:/tmp/.X11-unix \
                     palrobotics/public-tutorials-alum-devel bash
 ```
 
-> **Note**: The `--device` option is used to pass the webcam to the container, and the
+> 💡 The `--device` option is used to pass the webcam to the container, and the
 > `-e: DISPLAY` and `-v /tmp/.X11-unix:/tmp/.X11-unix` options are used to display
 > graphical applications on your screen.
 
 
 ### Share files between host and docker container
 
-For convenience, you can also mount a folder from your host machine to the
+For convenience, you can also mount your home folder to the
 container, to share files between the two environments:
 
 ```sh
-> mkdir ros4hri-exchange
-> docker run -it --rm --name ros4hri \
+mkdir ros4hri-exchange
+docker run -it --rm --name ros4hri \
                     --device /dev/video0:/dev/video0 \
                     -e DISPLAY=$DISPLAY \
                     -v /tmp/.X11-unix:/tmp/.X11-unix \
-                    -v `pwd`/ros4hri-exchange:/home/user/exchange \
+                    -v $HOST:/home/user \
                     palrobotics/public-tutorials-alum-devel bash
 ```
 
@@ -71,31 +71,29 @@ container, to share files between the two environments:
 
 ### Install hri_face_detect
 
-We first want to detect faces in our test bag file.
 
-We will use a ROS4HRI-compatible node for that purpose: [`hri_face_detect`](https://github.com/ros4hri/hri_face_detect/)
+### Start the webcam node
 
-To install it:
+First, let's start a webcam node to publish images from the webcam to ROS.
 
-First, let's get the code:
+In the terminal, type:
 
-```
-cd ws/src
-git clone https://github.com/ros4hri/hri_face_detect.git
-cd ..
+```sh
+ros2 launch usb_cam camera.launch.py
 ```
 
-Then, build it:
+You can open `rqt` to check that the images are indeed published:
 
-```
-source /opt/ros/noetic/setup.bash
-catkin build hri_face_detect
+> 💡 if you want to open another Docker terminal, run `docker exec -it -u user ros4hri bash`.
+
+```bash
+rqt
 ```
 
-> 💡 all the dependencies are already included in your container, so the
-> build step should work straight away. Otherwise, you would have had to install
-> manually `mediapipe` (`pip3 install mediapipe`) and all the other ROS
-> dependencies (`rosdep install -r -y --from-paths src`).
+Then, in the `Plugins` menu, select `Image View`:
+
+
+![rqt image view](../images/rqt-image-view.jpg)
 
 ### Start the face detection node
 
