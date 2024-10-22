@@ -23,7 +23,9 @@ application templates, and a LLM backend.
 **Note: the content on this page is not final, and will be updated before the
 tutorial day.**
 
-## Pre-requisites
+## CHAPTER 0: Preparing your environment
+
+### Pre-requisites
 
 To follow 'hands-on' the tutorial, you will need to be able to run a Docker
 container on your machine, with access to a X server (to display graphical
@@ -33,8 +35,8 @@ computer.
 Any recent Linux distribution should work, as well as MacOS (with XQuartz
 installed).
 
+### Get the public PAL tutorials Docker image
 
-## Preparing your environment
 
 Fetch the `PAL tutorials` public Docker image:
 
@@ -74,7 +76,7 @@ docker run -it --name ros4hri \
                palrobotics/public-tutorials-alum-devel bash
 ```
 
-## Face detection
+## CHAPTER 1: Face detection
 
 
 ### Start the webcam node
@@ -195,7 +197,7 @@ rviz2
 > 💡 on the above screenshot, the `Humans` plugin has also been added.
 
 
-## Building a social robot architecture
+## CHAPTER 2: Building a social robot architecture
 
 ### Using the interaction simulator
 
@@ -233,9 +235,9 @@ Finally, it launches `rqt` with several plugins:
 > and the [original paper](https://academia.skadge.org/publis/mohamed2021ros4hri.pdf).
 
 
-## The app supervisors and ROS Intents
+### The app supervisors and ROS Intents
 
-## Integration with LLMs
+## CHAPTER 3: Integration with LLMs
 
 
 
