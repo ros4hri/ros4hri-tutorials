@@ -422,7 +422,7 @@ from hri import HRIListener
 
 hri_listener = HRIListener("mimic_emotion_hrilistener")
 
-for face_id, face in self.hri_listener.faces.items():
+for face_id, face in hri_listener.faces.items():
     if face.expression:
             print(f"Face {face_id} shows expression {face.expression}")
 ```
@@ -439,7 +439,44 @@ msg.expression = "happy" # see Expression.msg for all available expressions
 expression_pub.publish(msg)
 ```
 
+Modify the mission controller to add a background 'job' of checking for people's
+face, and accordingly set the robot's expression:
+
+Add a `run()` method at the bottom of your mission controller:
+
+```python
+def run(self) -> None:
+
+    self.get_logger().info("Checking expressions...")
+
+    for face_id, face in self.hri_listener.faces.items():
+        if face.expression:
+                print(f"Face {face_id} shows expression {face.expression}")
+                
+                msg = Expression()
+                msg.expression = face.expression
+                self.expression_pub.publish(msg)
+```
+
+Then, in the `__init__` constructor, create the HRI listener, the expression
+publisher, and a timer to regularly call the `run()` method:
+
+```python
+
+def __init__(self):
+
+
+    # ...
+
+    self.hri_listener = HRIListener("mimic_emotion_hrilistener")
+    self.expression_pub = self.create_publisher(Expression, "/robot_face/expression", QoSProfile(depth=10))
+
+    self._timer = self.create_timer(0.1, self.run) # check at 10Hz
+``` 
+
 ### Adding a task
+
+To better structure our app, we can move the emotion
 
 `rpk create task --id greet_task`
 
