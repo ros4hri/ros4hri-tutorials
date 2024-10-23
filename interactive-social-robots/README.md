@@ -483,9 +483,54 @@ def __init__(self):
    every time a new message is sent.
 3. modify your chatbot to check whether incoming speech contains 'Hi' or
    'Hello'. If so, return a `__intent_greet__`. Modify your mission controller
-   to handle it and greet back.
+   to handle it and greet back. To do so, define a function to check whether the
+   input string actually contains either 'hi' or 'hello':
+   ```python
+   def _contains_greetings(sentence):
+    sentence = sentence.lower()
+
+    if 'hello' in sentence or 'hi' in sentence:
+        return True
+    else:
+        return False
+   ```
+   Then, in the `on_request_cb` function, input the incoming speech to this
+   function and use its output to generate an appropriate intent:
+   ```python
+   def on_request_cb(self, request, response):
+        """Basic service request callback."""
+        self.get_logger().info(f"request: {request.input}")
+        
+        if _contains_greetings(request.input):
+            response.response = "Hey there!"
+            intent = Intent(
+            intent=Intent.GREET,
+            confidence=1.0,
+            data='{"recipient": "human"}')        
+        else:
+            response.response = "I am sorry, I don't know."
+            intent = Intent(
+                intent=Intent.RAW_USER_INPUT,
+                confidence=1.0,
+                data=f'{{"input": \"{request.input}\"}}')
+        response.intents.append(intent)
+
+        return response
+   ```
+   Then, modify the mission controller function handling inbound intents,
+   in order to manage the `GREET` intent:
+   ```python
+
+    def on_intent(self, msg):
+        #...
+
+        if msg.intent == Intent.RAW_USER_INPUT:
+            goal = TTS.Goal()
+            goal.input = "<set expression(happy)> Hey there!"
+            self.tts.send_goal_async(goal)
+    ```
 4. similarly, send back an appropriate `__start_activity__` intent if the user
-   ask to 'copy expressions'
+   ask to 'copy expressions'. To do so, define a similar function
 
 Next, let's integrate with an LLM.
 
