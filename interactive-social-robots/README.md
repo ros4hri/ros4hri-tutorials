@@ -85,8 +85,8 @@ You can open `rqt` to check that the images are indeed published:
 rqt
 ```
 
-Then, in the `Plugins` menu, select `Image View`, and choose the topic
-`/came1/image_raw`:
+Then, in the `Plugins` menu, select `Visualization > Image View`, and choose the topic
+`/camera1/image_raw`:
 
 
 ![rqt image view](images/rqt-image-view.jpg)
@@ -165,22 +165,18 @@ Let's visualise them:
 rviz2
 ```
 
-2. In `rviz`, visualize the detected faces enabling the `Humans` plugin,
+2. In `rviz`, visualize the detected faces by adding the `Humans` plugin,
    which you can find in the `hri_rviz` plugins group. The plugin setup
    requires you to specify the image stream you want to use to visualize the
    detection results, in this case `/camera1/image_raw`.
    You can also find the plugin as one of those available 
    for the `/camera1/image_raw` topic.
 
-3. In `rviz`, enable the `tf` plugin, and set the fixed frame to `camera`. 
+3. In `rviz`, add as well the `tf` plugin, and set the fixed frame to `camera`. 
    You should now see a 3D frame, representing the face position and orientation of your face.
 
 
 ![rviz showing a 3D face frame](images/rviz-face.jpg)
-
-
-> 💡 on the above screenshot, the `Humans` plugin has also been added.
-
 
 ## CHAPTER 2: Building a social robot architecture
 
@@ -189,6 +185,12 @@ rviz2
 Instead of running nodes manually, we are now going to use our so-called *interaction simulator*:
 
 ![Social interaction simulator](images/interaction_sim.jpg)
+
+**TODO**
+
+> Tell them to stop the `usb_cam`
+> Tell them to stop the `hri_face_detect`
+> Tell how to start the simulator --> `ros2 launch interaction_sim simulation.launch.py`
 
 The interaction simulator starts the following nodes:
 
@@ -220,7 +222,38 @@ Finally, it launches `rqt` with several plugins:
 > and the [original paper](https://academia.skadge.org/publis/mohamed2021ros4hri.pdf).
 
 
-### The app supervisors and ROS Intents
+### Our first mission controller
+
+**TODO**
+
+> Run `rpk` to create the mission controller `rpk create mission --id emotion_mirror`
+> Use `colcon` to start it
+> run it
+
+#### Step 1
+
+See the input intent on the console
+
+#### Step 2
+
+Modify the template to say something back that is random about robot's holiday
+
+#### Step 3
+
+Use markup to set the expression of the robot and use ROS4HRI
+detect the user's emotion and use that to play the emotion mimicking
+game.
+
+### Adding a task
+
+`rpk create task --id greet_task`
+
+**TODO**
+
+> The robot saying something very simple (greeeting)
+> and changing the eyes shape.
+> In mission controller we should add a regex check
+> to see if the text received contains a greeting from the user.
 
 ## CHAPTER 3: Integration with LLMs
 
