@@ -250,17 +250,100 @@ Finally, it launches `rqt` with two custom plugins:
 
 ### Our first mission controller
 
-**TODO**
+A mission controller is a ROS node that orchestrates the robot's behaviour.
 
-> Run `rpk` to create the mission controller `rpk create mission --id emotion_mirror`
-> Use `colcon` to start it
-> run it
+We will implement our first mission controller as a simple Python script that
+listens to the user input speech (sent via the `rqt_chat` plugin), and reacts to
+it.
 
-#### Step 1
+Since creating a complete ROS 2 node from scratch can be a bit tedious, we will
+use the `rpk` tool, a command-line tool created by PAL Robotics, that generates
+ROS 2 nodes from templates.
 
-See the input intent on the console
 
-#### Step 2
+> 💡 `rpk` is already install in the Docker container. You can also install it
+> easily on your own machines with `pip install rpk`
+>
+> As the generator tool itself does not require ROS, you can use it on any
+> machine, including eg Windows.
+
+#### Step 1: generating the mission controller
+
+- go to your `exchange` folder and create a new workspace:
+
+```sh
+cd ~/exchange
+
+# you might have to change the rights of the folder
+sudo chmod user:user .
+
+mkdir ws
+cd ws
+```
+
+- run `rpk` to create the mission controller:
+
+```sh
+$ rpk create -p src/ mission
+ID of your application? (must be a valid ROS identifier without spaces or hyphens. eg 'robot_receptionist')
+emotion_mirror
+Full name of your skill/application? (eg 'The Receptionist Robot' or 'Database connector', press Return to use the ID. You can change it later)
+
+
+Choose a template:
+1: base robot supervisor [python]
+2: robot supervisor with intents handler [python]
+
+Your choice? 1
+
+What robot are you targeting?
+1: generic
+2: ari
+3: tiago
+
+Your choice? (default: 1: generic) 1
+```
+
+Choose a `base robot supervisor` template, and the `generic` robot.
+
+The tool will then create a complete ROS 2 mission controller, ready to listen
+to incoming user intents (eg, ROS messages pubished on the `/intents` topic).
+
+
+- build and source the workspace:
+
+```sh
+colcon build
+
+source install/setup.bash
+```
+
+- start the mission controller:
+
+```sh
+ros2 launch emotion_mirror emotion_mirror.launch.py
+```
+
+If you now write a line in the `rqt_chat` plugin, you should see the mission
+controller reacting to it:
+
+```
+[...]
+[run_app-1] [INFO] [1729672049.773179100] [emotion_mirror]: Listening to /intents topic
+[run_app-1] [INFO] [1729672099.529532393] [emotion_mirror]: Received an intent: __raw_user_input__
+[run_app-1] [INFO] [1729672099.529859652] [emotion_mirror]: Processing input: __raw_user_input__
+```
+
+The intent `__raw_user_input__` is emitted by the `communication_hub`, and is a
+special intent that essentially means: "I don't know what to do with this input,
+but I received it".
+
+Since we are not doing anything with the input yet (like trying to figure out
+what the user wants be calling a dedicated chatbot), the communication hub
+simply sends back the same message with this intent.
+
+
+#### Step 2: add basic interactivity
 
 Modify the template to say something back that is random about robot's holiday
 
