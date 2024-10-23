@@ -204,13 +204,13 @@ Instead of running nodes manually, we are now going to use our so-called *intera
 
 1. stop all the nodes that are running (like `usb_cam`, `hri_face_detect`,
    `rqt,` etc)
-2. in one of the Docker terminal, launch the simulator:
+2. in one of your Docker terminals, launch the simulator:
 
 ```
 ros2 launch interaction_sim simulation.launch.py
 ```
 
-The interaction simulator starts the following nodes:
+The interaction simulator starts several nodes:
 
 The previous two:
 - `usb_cam` to publish images from the webcam
@@ -234,6 +234,10 @@ Finally, it launches `rqt` with two custom plugins:
   robot. When you type a message, it is sent to the ROS4HRI topic
   `/humans/voices/anonymous_speaker/speech`, and the robot's response via the
   `/tts_engine/tts` action are displayed back.
+
+> 💡 refer to the [tutorial
+> slides](https://docs.google.com/presentation/d/1u8cJRri3J38OIdEW79IoqLq2Tniya7Sg/edit?usp=sharing&ouid=115732286809506967228&rtpof=true&sd=true)
+> for more information on the architecture of the interaction simulator.
 
 
 > **➡️ to go further**
@@ -345,7 +349,50 @@ simply sends back the same message with this intent.
 
 #### Step 2: add basic interactivity
 
-Modify the template to say something back that is random about robot's holiday
+Modify the template to say something back.
+
+- open `mission_controller.py`:
+
+```sh
+cd src/emotion_mirror/emotion_mirror
+nano mission_controller.py
+```
+
+- in the constructor, create a action client:
+
+```python
+#...
+from rclpy.action import ActionClient
+from tts_msgs.action import TTS
+#...
+
+class MissionController(Node):
+    def __init__(self):
+
+        #...
+        self.tts = ActionClient(self, TTS, '/communication_hub/say')
+        self.tts.wait_for_server()
+
+```
+
+- modify the handling on incoming intents to say something back:
+
+```python
+
+    def on_intent(self, msg):
+        #...
+
+        if msg.intent == Intent.RAW_USER_INPUT:
+            goal = TTS.Goal()
+            goal.text = "great to hear from you! My holiday was great, thank you for asking!"
+            self.tts.send_goal_async(goal)
+```
+
+(up to you to come up with something funny!)
+
+Re-run `colcon build` and relaunch your mission controller to test it with the
+chat interface.
+
 
 #### Step 3
 
