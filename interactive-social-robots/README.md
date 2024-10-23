@@ -13,12 +13,14 @@ framework, a set of ROS nodes and tools to build interactive social robots.
 We will use a set of pre-configured Docker containers to simplify the setup
 process.
 
-We will also explore how a simply yet complete social robot architecture can be
+We will also explore how a simple yet complete social robot architecture can be
 assembled using ROS 2, PAL Robotics' toolset to quickly generate robot
 application templates, and a LLM backend.
 
 ![Social interaction simulator](../images/social-interaction-simulator.jpg)
 
+
+**Accompanying slides are available [here](https://docs.google.com/presentation/d/1u8cJRri3J38OIdEW79IoqLq2Tniya7Sg/edit?usp=sharing&ouid=115732286809506967228&rtpof=true&sd=true)**
 
 **Note: the content on this page is not final, and will be updated before the
 tutorial day.**
@@ -34,6 +36,10 @@ computer.
 
 Any recent Linux distribution should work, as well as MacOS (with XQuartz
 installed).
+
+The tutorial alo assumes that you have a basic understanding of ROS 2 concepts
+(topics, nodes, launch files, etc). If you are not familiar with ROS 2, you can
+check the [official ROS 2 tutorials](https://docs.ros.org/en/jazzy/Tutorials.html).
 
 ### Get the public PAL tutorials Docker image
 
@@ -90,6 +96,13 @@ Then, in the `Plugins` menu, select `Visualization > Image View`, and choose the
 
 
 ![rqt image view](images/rqt-image-view.jpg)
+
+
+> 💡 the camera image might freeze after a while: it is a known issue with
+> `usb_cam` (due to their configuration of ROS 2 Quality of
+> Service parameters).
+>
+> Simple restart the `usb_cam` node to fix the issue (Ctrl+C to stop the node).
 
 ### Face detection
 
@@ -186,11 +199,16 @@ Instead of running nodes manually, we are now going to use our so-called *intera
 
 ![Social interaction simulator](images/interaction_sim.jpg)
 
-**TODO**
 
-> Tell them to stop the `usb_cam`
-> Tell them to stop the `hri_face_detect`
-> Tell how to start the simulator --> `ros2 launch interaction_sim simulation.launch.py`
+**To start the simulator:**
+
+1. stop all the nodes that are running (like `usb_cam`, `hri_face_detect`,
+   `rqt,` etc)
+2. in one of the Docker terminal, launch the simulator:
+
+```
+ros2 launch interaction_sim simulation.launch.py
+```
 
 The interaction simulator starts the following nodes:
 
@@ -207,14 +225,22 @@ And the following new nodes:
 - [`knowledge_core`](https://github.com/severin-lemaignan/knowledge_core), an open-source OWL/RDF-based knowledge base
 - [`hri_visualization`](https://github.com/ros4hri/hri_visualization) to generate a camera image overlay with the faces, bodies, emotions, etc
 
-Finally, it launches `rqt` with several plugins:
+Finally, it launches `rqt` with two custom plugins:
 
-**TODO**
+- [`rqt_human_radar`](https://github.com/ros4hri/rqt_human_radar), to visualize
+  the detected people around the robot (and simulated interactions with a
+  knowledge base)
+- [`rqt_chat`](https://github.com/pal-robotics/rqt_chat), to chat with the
+  robot. When you type a message, it is sent to the ROS4HRI topic
+  `/humans/voices/anonymous_speaker/speech`, and the robot's response via the
+  `/tts_engine/tts` action are displayed back.
+
 
 > **➡️ to go further**
 >
 > In today's tutorial, we will not go much further with exploring the ROS4HRI tools
 > and nodes. However, you can find more information:
+> - HRI'23 presentation: [ROS4HRI: A ROS-based Framework for Human-Robot Interaction](https://docs.google.com/presentation/d/1SSq6OmH_qBbjvXN93acqd92QnkmqMuaY/edit?usp=sharing&ouid=115732286809506967228&rtpof=true&sd=true)
 > - on the [ROS4HRI](https://wiki.ros.org/hri) wiki page
 > - in the ROS4HRI (ROS 1) tutorial [here](../intro-ros4hri-devcontainers/)
 >
