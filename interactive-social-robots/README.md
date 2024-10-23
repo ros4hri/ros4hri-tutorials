@@ -489,14 +489,33 @@ def __init__(self):
 
 Next, let's integrate with an LLM.
 
-1. Install `ollama`, download a LLM model (for instance, the small
+1. Install `ollama` on your machine, download a LLM model (for instance, the small
    `llama3.2:1b`) with `ollama run llama3.2:1b`, and start `ollama serve`.
+2. install the `ollama` python binding inside your Docker image: `pip install
+   ollama`.
 2. Modify your chatbot to connect to `ollama`, send the user input, and return
    a `__intent_say__` with the text returned by the LLM. You might need to
    extend your mission controller to handle the `__intent_say__`.
 3. Write a better prompt for your robot, and submit it to `ollama`, alongside
    the user input.
 
+Calling the LLM via `ollama` is as sinmple as:
 
+```python
+import ollama
 
+PROMPT="you are a helpful robot"
+
+response = ollama.chat(model='llama3.2:1b', messages=[
+  {
+    'role': 'system',
+    'content': PROMPT,
+  },
+  {
+    'role': 'user',
+    'content': 'Why is the sky blue?',
+  },
+])
+print(response['message']['content'])
+```
 
