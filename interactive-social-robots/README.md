@@ -394,11 +394,50 @@ Re-run `colcon build` and relaunch your mission controller to test it with the
 chat interface.
 
 
-#### Step 3
+Since we are using `communication_hub` as a middle-man, we can also use markup in our sentences to change the expression of the robot.
 
-Use markup to set the expression of the robot and use ROS4HRI
-detect the user's emotion and use that to play the emotion mimicking
+For example, you can use the following markup to change the expression of the robot:
+
+```
+"<set expression(happy)> great to hear from you! My holiday was great <set expression(amazed)>, thank you for asking! <set expression(neutral)>"
+```
+
+> 💡 unfortunately, `communication_hub`, while available on the Docker image, is 
+> not open-source. However, you could also simply manually set the robot's expression 
+> by publishing on the `/robot_face/expression` topic (as we do below!).
+
+
+#### Step 3: emotion mimicking game
+
+We can now extend our mission controller to implement our emotion mirroring
 game.
+
+To get the recognised facial expression of the current user, we can use the
+ROS4HRI tools:
+
+For instance:
+
+```python
+from hri import HRIListener
+
+hri_listener = HRIListener("mimic_emotion_hrilistener")
+
+for face_id, face in self.hri_listener.faces.items():
+    if face.expression:
+            print(f"Face {face_id} shows expression {face.expression}")
+```
+
+Then, we can set the same expression onto the robot face:
+
+```python
+from hri_msgs.msg import Expression
+
+expression_pub = self.create_publisher(Expression, "/robot_face/expression", QoSProfile(depth=10))
+
+msg = Expression()
+msg.expression = "happy" # see Expression.msg for all available expressions
+expression_pub.publish(msg)
+```
 
 ### Adding a task
 
