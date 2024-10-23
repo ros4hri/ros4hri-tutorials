@@ -474,33 +474,29 @@ def __init__(self):
     self._timer = self.create_timer(0.1, self.run) # check at 10Hz
 ``` 
 
-### Adding a task
-
-To better structure our app, we can move the emotion
-
-`rpk create task --id greet_task`
-
-**TODO**
-
-> The robot saying something very simple (greeeting)
-> and changing the eyes shape.
-> In mission controller we should add a regex check
-> to see if the text received contains a greeting from the user.
 
 ## CHAPTER 3: Integration with LLMs
 
 
+1. create a new `chatbot` skill using the simple chabot skill template
+2. test it work: once started the communication hub should start calling it
+   every time a new message is sent.
+3. modify your chatbot to check whether incoming speech contains 'Hi' or
+   'Hello'. If so, return a `__intent_greet__`. Modify your mission controller
+   to handle it and greet back.
+4. similarly, send back an appropriate `__start_activity__` intent if the user
+   ask to 'copy expressions'
 
-## If you want more...!
+Next, let's integrate with an LLM.
 
-Here a few additional tasks you might want to try, to further explore ROS4HRI:
+1. Install `ollama`, download a LLM model (for instance, the small
+   `llama3.2:1b`) with `ollama run llama3.2:1b`, and start `ollama serve`.
+2. Modify your chatbot to connect to `ollama`, send the user input, and return
+   a `__intent_say__` with the text returned by the LLM. You might need to
+   extend your mission controller to handle the `__intent_say__`.
+3. Write a better prompt for your robot, and submit it to `ollama`, alongside
+   the user input.
 
-- Write a small Python script that list on the console the people around the
-  robot ([hint!](https://www.phind.com/search?cache=rhu3n4zmjwshfp0h3vp29b9w)).
 
-- write a node (C++ or Python) to automatically match faces and bodies. One
-  approach consists in computing the overlap of the regions of interest of pairs
-  of (face, body), and compute a likelihood based on that.
 
-  Check the [C++ `libhri` API
-  documentation](http://docs.ros.org/en/humble/p/hri/) here.
+
