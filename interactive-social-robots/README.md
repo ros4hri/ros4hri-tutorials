@@ -207,7 +207,7 @@ Instead of running nodes manually, we are now going to use our so-called *intera
 2. in one of your Docker terminals, launch the simulator:
 
 ```
-ros2 launch interaction_sim simulation.launch.py
+ros2 launch interaction_sim simulator.launch.py
 ```
 
 The interaction simulator starts several nodes:
