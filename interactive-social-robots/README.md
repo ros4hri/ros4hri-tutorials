@@ -25,7 +25,7 @@ application templates, and a LLM backend.
 **Note: the content on this page is not final, and will be updated before the
 tutorial day.**
 
-## CHAPTER 0: Preparing your environment
+## PART 0: Preparing your environment
 
 ### Pre-requisites
 
@@ -67,7 +67,7 @@ docker run -it --name ros4hri \
 > `-e: DISPLAY` and `-v /tmp/.X11-unix:/tmp/.X11-unix` options are used to display
 > graphical applications on your screen.
 
-## CHAPTER 1: Face detection
+## PART 1: Warming-up with face detection
 
 
 ### Start the webcam node
@@ -77,8 +77,14 @@ First, let's start a webcam node to publish images from the webcam to ROS.
 In the terminal, type:
 
 ```sh
-ros2 launch usb_cam camera.launch.py
+ros2 run gscam gscam_node --ros-args -p gscam_config:='v4l2src device=/dev/video0 ! video/x-raw,framerate=30/1 ! videoconvert' -p use_sensor_data_qos:=True -p camera_name:=camera -p frame_id:=camera -p camera_info_url:=package://interaction_sim/config/camera_info.yaml
 ```
+
+> 💡 the `gscam` node is a ROS 2 node that captures images from a webcam and
+> publishes them on a ROS topic. The `gscam_config` parameter is used to specify
+> the webcam device to use (`/dev/video0`), and the `camera_info_url` parameter
+> is used to specify the camera calibration file. We use a default calibration
+> file that works reasonably well with most webcams.
 
 You can open `rqt` to check that the images are indeed published:
 
@@ -92,17 +98,10 @@ rqt
 ```
 
 Then, in the `Plugins` menu, select `Visualization > Image View`, and choose the topic
-`/camera1/image_raw`:
+`/camera/image_raw`:
 
 
 ![rqt image view](images/rqt-image-view.jpg)
-
-
-> 💡 the camera image might freeze after a while: it is a known issue with
-> `usb_cam` (due to their configuration of ROS 2 Quality of
-> Service parameters).
->
-> Simple restart the `usb_cam` node to fix the issue (Ctrl+C to stop the node).
 
 ### Face detection
 
@@ -123,9 +122,11 @@ Then, paste the following content:
 ```yaml
 /hri_face_detect:
    remappings:
-      image: /camera1/image_raw
-      camera_info: /camera1/camera_info
+      image: /camera/image_raw
+      camera_info: /camera/camera_info
 ```
+
+Press `Ctrl+O` to save, then `Ctrl+X` to exit.
 
 Then, you can launch the node:
 
@@ -153,8 +154,8 @@ $ ros2 launch hri_face_detect face_detect.launch.py
 - deterministic_ids: False
 - debug: False
 [INFO] [launch.user]: Remappings:
-- image -> /camera1/image_raw
-- camera_info -> /camera1/camera_info
+- image -> /camera/image_raw
+- camera_info -> /camera/camera_info
 [INFO] [face_detect-1]: process started with pid [214]
 ...
 ```
@@ -167,8 +168,6 @@ $ ros2 launch hri_face_detect face_detect.launch.py
 > to understand how it is used.
 
 You should immediately see on the console that some faces are indeed detected
-(if not, try restart the `usb_cam` node: ROS 2 sometimes struggles with large
-messages like images).
 
 Let's visualise them:
 
@@ -181,28 +180,50 @@ rviz2
 2. In `rviz`, visualize the detected faces by adding the `Humans` plugin,
    which you can find in the `hri_rviz` plugins group. The plugin setup
    requires you to specify the image stream you want to use to visualize the
-   detection results, in this case `/camera1/image_raw`.
+   detection results, in this case `/camera/image_raw`.
    You can also find the plugin as one of those available 
-   for the `/camera1/image_raw` topic.
+   for the `/camera/image_raw` topic.
 
-3. In `rviz`, add as well the `tf` plugin, and set the fixed frame to `camera`. 
+> ‼️ **Important**: set the quality of service (QoS) of the `/camera/image_raw`
+> topic to `Best Effort`:
+>
+> ![Set the QoS of the `/camera/image_raw` topic to `Best Effort`](../images/rviz-humans-qos.png)
+
+3. In `rviz`, enable as well the `tf` plugin, and set the fixed frame to `camera`. 
    You should now see a 3D frame, representing the face position and orientation of your face.
 
 
 ![rviz showing a 3D face frame](images/rviz-face.jpg)
 
-## CHAPTER 2: Building a social robot architecture
 
-### Using the interaction simulator
+> **➡️ to go deeper**
+>
+> In today's tutorial, we will not go much further with exploring the ROS4HRI tools
+> and nodes. However, you can find more information:
+> - HRI'23 presentation: [ROS4HRI: A ROS-based Framework for Human-Robot Interaction](https://docs.google.com/presentation/d/1SSq6OmH_qBbjvXN93acqd92QnkmqMuaY/edit?usp=sharing&ouid=115732286809506967228&rtpof=true&sd=true)
+> - [PAL Robotics public
+>   documentation](https://docs.pal-robotics.com/edge/social-perception/) that
+>   includes multiple tutorials and examples
+> - on the [ROS4HRI](https://wiki.ros.org/hri) wiki page
+> - in the ROS4HRI (ROS 1) tutorial [here](../intro-ros4hri-devcontainers/)
+>
+> You can also check the [ROS4HRI Github organisation](https://github.com/ros4hri/)
+> and the [original paper](https://academia.skadge.org/publis/mohamed2021ros4hri.pdf).
 
-Instead of running nodes manually, we are now going to use our so-called *interaction simulator*:
+
+
+## PART 2: the social interaction simulator
+
+### Starting the interaction simulator
+
+Instead of running nodes manually, we are now going to use PAL *interaction simulator*:
 
 ![Social interaction simulator](images/interaction_sim.jpg)
 
 
 **To start the simulator:**
 
-1. stop all the nodes that are running (like `usb_cam`, `hri_face_detect`,
+1. stop all the nodes that are running (like `gscam`, `hri_face_detect`,
    `rqt,` etc)
 2. in one of your Docker terminals, launch the simulator:
 
@@ -210,47 +231,110 @@ Instead of running nodes manually, we are now going to use our so-called *intera
 ros2 launch interaction_sim simulator.launch.py
 ```
 
+**To load a pre-configured scene:**
+
+On the screenshot above, the objets (sofa, table, etc) are defined in an custom
+SVG file.
+
+You can load such a pre-configured scene:
+
+1. click on `Settings`, then `Download environment SVG template` and save the
+   file in the `exchange` folder (call it for instance `scene.svg`).
+2. click on `Load environment` and select the file you just saved.
+
+> 💡 you can open the SVG file in a vector editor like Inkscape to 
+> modify the scene (add new objects, change the layout, etc). Check the instructions
+> written in the template itself.
+
+### Interaction simulator architecture
+
 The interaction simulator starts several nodes:
 
 The previous two:
-- `usb_cam` to publish images from the webcam
-- [`hri_face_detect`](https://github.com/ros4hri/hri_face_detect) to detect faces in images
+
+1. [`gscam`](https://github.com/ros-drivers/gscam/tree/ros2) to publish images from the webcam
+2. [`hri_face_detect`](https://github.com/ros4hri/hri_face_detect) to detect faces in images
 
 And the following new nodes:
-- [`hri_person_manager`](https://github.com/ros4hri/hri_visualization), to 'combine' faces, bodies, voices into full persons
-- [`hri_emotion_recognizer`](https://github.com/ros4hri/hri_emotion_recognizer), to recognize emotions on the detected faces
-- `attention_manager`, that decides where to look based on the where the faces are
-- `expressive_eyes`, that procedurally generates the robot's face and moves the eyes
-- `communication_hub`, that manages the dialogues with the user (user input speech, and robot output speech)
-- [`knowledge_core`](https://github.com/severin-lemaignan/knowledge_core), an open-source OWL/RDF-based knowledge base
-- [`hri_visualization`](https://github.com/ros4hri/hri_visualization) to generate a camera image overlay with the faces, bodies, emotions, etc
+
+3. [`hri_person_manager`](https://github.com/ros4hri/hri_person_manager), to 'combine' faces, bodies, voices into full persons
+4. [`hri_emotion_recognizer`](https://github.com/ros4hri/hri_emotion_recognizer), to recognize emotions on the detected faces
+5. [`knowledge_core`](https://github.com/severin-lemaignan/knowledge_core), an open-source OWL/RDF-based knowledge base
+6. [`hri_visualization`](https://github.com/ros4hri/hri_visualization) to generate a camera image overlay with the faces, bodies, emotions, etc
+7. `attention_manager` (not open-source), that decides where to look based on the where the faces are
+8. `expressive_eyes` (not open-source), that procedurally generates the robot's face and moves the eyes
+9. `communication_hub` (not open-source), that manages the dialogues with the user (user input speech, and robot output speech)
 
 Finally, it launches `rqt` with two custom plugins:
 
-- [`rqt_human_radar`](https://github.com/ros4hri/rqt_human_radar), to visualize
+10. [`rqt_human_radar`](https://github.com/ros4hri/rqt_human_radar), to visualize
   the detected people around the robot (and simulated interactions with a
   knowledge base)
-- [`rqt_chat`](https://github.com/pal-robotics/rqt_chat), to chat with the
+11. [`rqt_chat`](https://github.com/pal-robotics/rqt_chat), to chat with the
   robot. When you type a message, it is sent to the ROS4HRI topic
   `/humans/voices/anonymous_speaker/speech`, and the robot's response via the
   `/tts_engine/tts` action are displayed back.
 
-> 💡 refer to the [tutorial
-> slides](https://docs.google.com/presentation/d/1u8cJRri3J38OIdEW79IoqLq2Tniya7Sg/edit?usp=sharing&ouid=115732286809506967228&rtpof=true&sd=true)
-> for more information on the architecture of the interaction simulator.
+
+The next figure shows the architecture of the interaction simulator:
+
+![Interaction simulator architecture](images/interaction-simulator-architecture.png)
+
+### Using the simulator to add symbolic knowledge
+
+When starting the simulator, `knowledge_core` is also started. `knowledge_core`
+is a simple OWL/RDF-based knowledge base that can be used to store symbolic
+information about the world.
+
+By right-clicking on the top-down view of the environment, you can add new
+objects to the knowledge base:
+
+![Adding a new object to the knowledge base](images/interaction_sim_facts.png)
+
+The simulator will then publish the new facts on to the knowledge base,
+including whether or not a given object is in the field of view of the robot
+and/or humans (eg `myself sees cup_abcd` or `person_lkhgx sees sofa`).
+
+You can easily query the knowledge base from Python:
+
+Start `ipython3` in the terminal:
+
+```sh
+ipython3
+```
+
+Then, in the Python shell:
+
+```python
+from knowledge_core.api import KB
+kb = KB()
+
+kb["* sees *"]
+```
+
+This will return all the facts in the knowledge base that match the pattern `*
+sees *` (ie, all the objects that are seen by someone).
+
+You can also create more complex queries by passing a *list* of semantic
+patterns and using *named variables*:
+
+```python
+kb[["?h sees ?o", "?o rdf:type dbr:Cup", "?h rdf:type Human"]]
+```
+
+This will return all the facts in the knowledge base where a human sees a cup.
+
+> 💡 note the `dbr:` prefix in front of `Cup`: the simulator uses the 'cup'
+> concept defined in the DBPedia ontology.
 
 
-> **➡️ to go further**
+> **➡️ to go deeper**
 >
-> In today's tutorial, we will not go much further with exploring the ROS4HRI tools
-> and nodes. However, you can find more information:
-> - HRI'23 presentation: [ROS4HRI: A ROS-based Framework for Human-Robot Interaction](https://docs.google.com/presentation/d/1SSq6OmH_qBbjvXN93acqd92QnkmqMuaY/edit?usp=sharing&ouid=115732286809506967228&rtpof=true&sd=true)
-> - on the [ROS4HRI](https://wiki.ros.org/hri) wiki page
-> - in the ROS4HRI (ROS 1) tutorial [here](../intro-ros4hri-devcontainers/)
->
-> You can also check the [ROS4HRI Github organisation](https://github.com/ros4hri/)
-> and the [original paper](https://academia.skadge.org/publis/mohamed2021ros4hri.pdf).
+> To learn mode about PAL interaction simulator, check PAL Robotics' [public
+> documentation](https://docs.pal-robotics.com/edge/development/interaction-simulator).
 
+
+## PART 3: Building a simple social behaviour
 
 ### Our first mission controller
 
@@ -279,7 +363,7 @@ ROS 2 nodes from templates.
 cd ~/exchange
 
 # you might have to change the rights of the folder
-sudo chmod user:user .
+sudo chown user:user .
 
 mkdir ws
 cd ws
@@ -296,19 +380,25 @@ Full name of your skill/application? (eg 'The Receptionist Robot' or 'Database c
 
 Choose a template:
 1: base robot supervisor [python]
-2: robot supervisor with intents handler [python]
+2: robot supervisor with pre-filled intent handlers [python]
+3: robot supervisor with a GUI and pre-filled intent handlers [python]
+4: complete supervisor example, using a basic chatbot to manage interactions with users [python]
+5: complete supervisor example, using LLMs to manage interactions with users [python]
 
 Your choice? 1
 
 What robot are you targeting?
-1: generic
-2: ari
-3: tiago
+1: Generic robot (generic)
+2: Generic PAL robot/simulator (generic-pal)
+3: PAL ARI (ari)
+4: PAL TIAGo (tiago)
+5: PAL TIAGo Pro (tiago-pro)
+6: PAL TIAGo Head (tiago-head)
 
-Your choice? (default: 1: generic) 1
+Your choice? (default: 1: generic) 2
 ```
 
-Choose a `base robot supervisor` template, and the `generic` robot.
+Choose a `base robot supervisor` template, and the `generic-pal` robot.
 
 The tool will then create a complete ROS 2 mission controller, ready to listen
 to incoming user intents (eg, ROS messages pubished on the `/intents` topic).
