@@ -77,8 +77,14 @@ First, let's start a webcam node to publish images from the webcam to ROS.
 In the terminal, type:
 
 ```sh
-ros2 launch usb_cam camera.launch.py
+ros2 run gscam gscam_node --ros-args -p gscam_config:='v4l2src device=/dev/video0 ! video/x-raw,framerate=30/1 ! videoconvert' -p use_sensor_data_qos:=True -p camera_name:=camera -p frame_id:=camera -p camera_info_url:=package://interaction_sim/config/camera_info.yaml
 ```
+
+> 💡 the `gscam` node is a ROS 2 node that captures images from a webcam and
+> publishes them on a ROS topic. The `gscam_config` parameter is used to specify
+> the webcam device to use (`/dev/video0`), and the `camera_info_url` parameter
+> is used to specify the camera calibration file. We use a default calibration
+> file that works reasonably well with most webcams.
 
 You can open `rqt` to check that the images are indeed published:
 
@@ -92,17 +98,10 @@ rqt
 ```
 
 Then, in the `Plugins` menu, select `Visualization > Image View`, and choose the topic
-`/camera1/image_raw`:
+`/camera/image_raw`:
 
 
 ![rqt image view](images/rqt-image-view.jpg)
-
-
-> 💡 the camera image might freeze after a while: it is a known issue with
-> `usb_cam` (due to their configuration of ROS 2 Quality of
-> Service parameters).
->
-> Simple restart the `usb_cam` node to fix the issue (Ctrl+C to stop the node).
 
 ### Face detection
 
@@ -123,9 +122,11 @@ Then, paste the following content:
 ```yaml
 /hri_face_detect:
    remappings:
-      image: /camera1/image_raw
-      camera_info: /camera1/camera_info
+      image: /camera/image_raw
+      camera_info: /camera/camera_info
 ```
+
+Press `Ctrl+O` to save, then `Ctrl+X` to exit.
 
 Then, you can launch the node:
 
@@ -153,8 +154,8 @@ $ ros2 launch hri_face_detect face_detect.launch.py
 - deterministic_ids: False
 - debug: False
 [INFO] [launch.user]: Remappings:
-- image -> /camera1/image_raw
-- camera_info -> /camera1/camera_info
+- image -> /camera/image_raw
+- camera_info -> /camera/camera_info
 [INFO] [face_detect-1]: process started with pid [214]
 ...
 ```
@@ -167,8 +168,6 @@ $ ros2 launch hri_face_detect face_detect.launch.py
 > to understand how it is used.
 
 You should immediately see on the console that some faces are indeed detected
-(if not, try restart the `usb_cam` node: ROS 2 sometimes struggles with large
-messages like images).
 
 Let's visualise them:
 
@@ -181,11 +180,16 @@ rviz2
 2. In `rviz`, visualize the detected faces by adding the `Humans` plugin,
    which you can find in the `hri_rviz` plugins group. The plugin setup
    requires you to specify the image stream you want to use to visualize the
-   detection results, in this case `/camera1/image_raw`.
+   detection results, in this case `/camera/image_raw`.
    You can also find the plugin as one of those available 
-   for the `/camera1/image_raw` topic.
+   for the `/camera/image_raw` topic.
 
-3. In `rviz`, add as well the `tf` plugin, and set the fixed frame to `camera`. 
+> ‼️ **Important**: set the quality of service (QoS) of the `/camera/image_raw`
+> topic to `Best Effort`:
+>
+> ![Set the QoS of the `/camera/image_raw` topic to `Best Effort`](../images/rviz-humans-qos.png)
+
+3. In `rviz`, enable as well the `tf` plugin, and set the fixed frame to `camera`. 
    You should now see a 3D frame, representing the face position and orientation of your face.
 
 
