@@ -379,7 +379,7 @@ ROS 2 nodes from templates.
 > As the generator tool itself does not require ROS, you can use it on any
 > machine, including eg Windows.
 
-#### Step 1: generating the mission controller
+### Step 1: generating the mission controller
 
 - go to your `exchange` folder and create a new workspace:
 
@@ -465,7 +465,7 @@ what the user wants be calling a dedicated chatbot), the communication hub
 simply sends back the same message with this intent.
 
 
-#### Step 2: add basic interactivity
+### Step 2: add basic interactivity
 
 Modify the template to say something back. To start with, we will always
 respond the same thing.
@@ -532,7 +532,7 @@ For example, you can use the following markup to display an happy face:
 > by publishing on the `/robot_face/expression` topic (as we do below).
 
 
-#### Step 3: emotion mimicking game
+### Step 3: emotion mimicking game
 
 We can now extend our mission controller to implement our emotion mirroring
 game.
@@ -680,56 +680,117 @@ class MissionController(Node):
                     self.last_expression = face.expression
 ```
 
-# CHAPTER 3: Integration with LLMs
+## CHAPTER 3: Integration with LLMs
 
 
-1. create a new `chatbot` skill using the simple chabot skill template
-2. test it work: once started the communication hub should start calling it
-   every time a new message is sent.
-3. modify your chatbot to check whether incoming speech contains 'Hi' or
-   'Hello'. If so, return a `__intent_greet__`. Modify your mission controller
-   to handle it and greet back. To do so, define a function to check whether the
-   input string actually contains either 'hi' or 'hello':
-   ```python
-   def _contains_greetings(sentence):
+### Step 1: creating a chatbot
+
+
+1. use `rpk` to create a new `chatbot` skill using the *basic chabot* intent
+   extraction template:
+
+```sh
+$ rpk create -p src intent
+ID of your application? (must be a valid ROS identifier without spaces or hyphens. eg 'robot_receptionist')
+chatbot
+Full name of your skill/application? (eg 'The Receptionist Robot' or 'Database connector', press Return to use the ID. You can change it later)
+
+
+Choose a template:
+1: basic chatbot template [python]
+2: complete intent extraction example: LLM bridge using the OpenAI API (ollama, chatgpt) [python]
+
+Your choice? 1
+
+What robot are you targeting?
+1: Generic robot (generic)
+2: Generic PAL robot/simulator (generic-pal)
+3: PAL ARI (ari)
+4: PAL TIAGo (tiago)
+5: PAL TIAGo Pro (tiago-pro)
+6: PAL TIAGo Head (tiago-head)
+
+Your choice? (default: 1: generic) 2
+```
+
+Compile and run the chatbot:
+
+```sh
+colcon build
+source install/setup.bash
+ros2 launch chatbot chatbot.launch.py
+```
+
+If you know type a message in the `rqt_chat` plugin, you should see the chatbot
+responding to it:
+
+![Chatbot responding to a message](images/chatbot_tpl.png)
+
+You can also see in the chat window the *intents* that the chatbot has
+identified in the user input. For now, our basic chatbot only recognises the
+`__intent_greet__` intent when you type `Hi` or `Hello`.
+
+
+### Step 2: integrating the chatbot with the mission controller
+
+
+To fully understand the intent pipeline, we will modify the chatbot to
+recognise a 'pick up' intent, and the mission controller to handle it.
+
+- modify your chatbot to check whether incoming speech matches `[please] pick up [the] <object>`:
+
+```python
+import re
+
+def contains_pickup(sentence):
     sentence = sentence.lower()
 
-    if 'hello' in sentence or 'hi' in sentence:
-        return True
-    else:
-        return False
-   ```
-   Then, in the `on_request_cb` function, input the incoming speech to this
-   function and use its output to generate an appropriate intent:
+    # matches sentences like: [please] pick up [the] <object> and return <object>
+    pattern = r"(?:please\s+)?pick\s+up\s+(?:the\s+)?(\w+)"
+    match = re.search(pattern, sentence)
+    if match:
+        return match.group(1)
+```
 
-{% raw %}
-   ```python
-   def on_request_cb(self, request, response):
-        """Basic service request callback."""
-        self.get_logger().info(f"request: {request.input}")
-        
-        if _contains_greetings(request.input):
-            response.response = "Hey there!"
-            intent = Intent(
-            intent=Intent.GREET,
-            confidence=1.0,
-            data='{"recipient": "human"}')        
-        else:
-            response.response = "I am sorry, I don't know."
-            intent = Intent(
-                intent=Intent.RAW_USER_INPUT,
-                confidence=1.0,
-                data=f'{{"input": \"{request.input}\"}}')
-        response.intents.append(intent)
+- then, in the `on_get_response` function, check if the incoming speech matches the pattern, and if so, return a `__intent_grab_object__`:
 
-        return response
-   ```
-{% endraw %}
+```python
+def on_get_response(self, request, response):
 
-   Then, modify the mission controller function handling inbound intents,
+    #...
+
+    pick_up_object = self.contains_pickup(input)
+    if pick_up_object:
+        self.get_logger().warn(f"I think the user want to pick up a {pick_up_object}. Sending a GRAB_OBJECT intent")
+        intent = Intent(intent=Intent.GRAB_OBJECT,
+                        data=json.dumps({"object": pick_up_object}),
+                        source=user_id,
+                        modality=Intent.MODALITY_SPEECH,
+                        confidence=.8)
+        suggested_response = f"Sure, let me pick up this {pick_up_object}"
+    # elif ...
+```
+
+> 💡 the `Intent` message is defined in the `hri_actions_msgs` package, and
+> contains the intent, the data associated with the intent, the source of the
+> intent (here, the current `user_id`), the modality (here, `speech`), and the confidence of the
+> recognition.
+>
+> Check the [Intents documentation on PAL
+> website](https://docs.pal-robotics.com/edge/development/intents) for details,
+> or directly the
+> [Intent.msg](https://github.com/ros4hri/hri_actions_msgs/blob/humble-devel/msg/Intent.msg)
+> definition.
+
+Test your updated chatbot by recompiling the workspace (`colcon build`) and relaunching the chatbot.
+
+If you now type `pick up the cup` in the chat window, you should see the chatbot
+recognising the intent and sending a `GRAB_OBJECT` intent to the mission controller.
+
+- finally, modify the mission controller function handling inbound intents,
    in order to manage the `GREET` intent:
-   ```python
 
+   ```python
     def on_intent(self, msg):
         #...
 
@@ -738,22 +799,69 @@ class MissionController(Node):
             goal.input = "<set expression(happy)> Hey there!"
             self.tts.send_goal_async(goal)
     ```
+
 4. similarly, send back an appropriate `__start_activity__` intent if the user
    ask to 'copy expressions'. To do so, define a similar function
 
+
+### Integrating with a Large Language Model
+
 Next, let's integrate with an LLM.
 
+#### Step 1: using `ollama`
+
+`ollama` is an open-source tool that provides a simple REST API to interact with
+a variety of LLMs. It makes it easy to install different LLMs, and to call them
+using the same REST API as, eg, OpenAI's ChatGPT.
+
+To install `ollama` on your machine, follow the instructions on the
+[official repository](https://ollama.com/download):
+
+```sh
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+Once it is installed, you can start the `ollama` server with:
+
+```sh
+ollama serve
+```
+
+Open a new Docker terminal, and run the following command to download a first model and check it works:
+
+```sh
+ollama run deepseek-r1:1.5b
+```
+
+> 💡 Visit the [`ollama` model page ](https://ollama.com/search) to see the
+> list of available models.
+>
+> Depending on the size of the model and your computer configuration, the
+> response time can be quite long.
+>
+> If you have a NVIDIA GPU, you might want to relaunch your Docker container
+> with GPU support. Check the [instructions on the NVidia
+> website](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+>
+> Alternatively, you can run `ollama` on your host machine, as we will interact
+> with it via a REST API.
+
+
 1. Install `ollama` on your machine, download a LLM model (for instance, the small
-   `llama3.2:1b`) with `ollama run llama3.2:1b`, and start `ollama serve`.
+   `deepseek-r1:1b`) with `ollama run deepseek-r1:1b`, and start `ollama serve`.
+
 2. install the `ollama` python binding inside your Docker image: `pip install
    ollama`.
+
+
+
 2. Modify your chatbot to connect to `ollama`, send the user input, and return
    a `__intent_say__` with the text returned by the LLM. You might need to
    extend your mission controller to handle the `__intent_say__`.
 3. Write a better prompt for your robot, and submit it to `ollama`, alongside
    the user input.
 
-Calling the LLM via `ollama` is as sinmple as:
+Calling the LLM via `ollama` is as simple as:
 
 ```python
 import ollama
