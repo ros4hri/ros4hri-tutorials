@@ -586,6 +586,8 @@ def __init__(self):
    ```
    Then, in the `on_request_cb` function, input the incoming speech to this
    function and use its output to generate an appropriate intent:
+
+{% raw %}
    ```python
    def on_request_cb(self, request, response):
         """Basic service request callback."""
@@ -607,6 +609,8 @@ def __init__(self):
 
         return response
    ```
+{% endraw %}
+
    Then, modify the mission controller function handling inbound intents,
    in order to manage the `GREET` intent:
    ```python
