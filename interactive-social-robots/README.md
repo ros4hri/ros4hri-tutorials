@@ -295,6 +295,31 @@ The simulator will then publish the new facts on to the knowledge base,
 including whether or not a given object is in the field of view of the robot
 and/or humans (eg `myself sees cup_abcd` or `person_lkhgx sees sofa`).
 
+To visualize the knowledge base, we need to start PAL web-based knowledge base viewer.
+
+In a new terminal, start the viewer:
+
+```sh
+ros2 launch knowledge_core knowledge_viewer.launch.py
+```
+
+Then, open your web browser at `http://localhost:8000` to explore the knowledge base.
+
+For instance, with the following scene:
+![Scene with a sofa and a cup](images/scene_kb.png)
+
+the knowledge base will contain the following facts:
+
+
+![Knowledge base viewer](images/kb.png)
+
+
+> 💡 the robot's own 'instance' is always called `myself` in the knowledge base.
+>
+> For instance `myself sees cup_oojnc` means that the robot sees the cup `cup_oojnc`.
+
+### Accessing the knowledge base from Python
+
 You can easily query the knowledge base from Python:
 
 Start `ipython3` in the terminal:
@@ -341,8 +366,7 @@ This will return all the facts in the knowledge base where a human sees a cup.
 A mission controller is a ROS node that orchestrates the robot's behaviour.
 
 We will implement our first mission controller as a simple Python script that
-listens to the user input speech (sent via the `rqt_chat` plugin), and reacts to
-it.
+copies your facial expression onto the robot's face: an emotion mirroring game.
 
 Since creating a complete ROS 2 node from scratch can be a bit tedious, we will
 use the `rpk` tool, a command-line tool created by PAL Robotics, that generates
@@ -428,6 +452,10 @@ controller reacting to it:
 [run_app-1] [INFO] [1729672099.529859652] [emotion_mirror]: Processing input: __raw_user_input__
 ```
 
+> 💡 `rqt_chat` displays 'Processing...' as it waits for a response from the
+> mission controller. The mission controller is not doing anything yet, so 
+> 'Processing...' is displayed indefinitely (for now!).
+
 The intent `__raw_user_input__` is emitted by the `communication_hub`, and is a
 special intent that essentially means: "I don't know what to do with this input,
 but I received it".
@@ -439,7 +467,8 @@ simply sends back the same message with this intent.
 
 #### Step 2: add basic interactivity
 
-Modify the template to say something back.
+Modify the template to say something back. To start with, we will always
+respond the same thing.
 
 - open `mission_controller.py`:
 
@@ -460,7 +489,7 @@ class MissionController(Node):
     def __init__(self):
 
         #...
-        self.tts = ActionClient(self, TTS, '/communication_hub/say')
+        self.tts = ActionClient(self, TTS, '/say')
         self.tts.wait_for_server()
 
 ```
@@ -474,7 +503,7 @@ class MissionController(Node):
 
         if msg.intent == Intent.RAW_USER_INPUT:
             goal = TTS.Goal()
-            goal.text = "great to hear from you! My holiday was great, thank you for asking!"
+            goal.input = "I'm the famous emotion mirroring robot! (but I'm not great at chatting yet)"
             self.tts.send_goal_async(goal)
 ```
 
@@ -484,17 +513,23 @@ Re-run `colcon build` and relaunch your mission controller to test it with the
 chat interface.
 
 
-Since we are using `communication_hub` as a middle-man, we can also use markup in our sentences to change the expression of the robot.
+Since we are using `communication_hub` as a middle-man, we can also use markup
+in our sentences to change the expression of the robot.
 
-For example, you can use the following markup to change the expression of the robot:
+For example, you can use the following markup to display an happy face:
 
 ```
-"<set expression(happy)> great to hear from you! My holiday was great <set expression(amazed)>, thank you for asking! <set expression(neutral)>"
+"<set expression(happy)> I'm the famous emotion mirroring robot! My holiday was great <set expression(amazed)>, thank you for asking! <set expression(neutral)>"
 ```
 
-> 💡 unfortunately, `communication_hub`, while available on the Docker image, is 
-> not open-source. However, you could also simply manually set the robot's expression 
-> by publishing on the `/robot_face/expression` topic (as we do below!).
+> **➡️ to go deeper**
+>
+> You can check the online documentation of the [markup language](https://docs.pal-robotics.com/edge/communication/tts_howto#multi-modal-expression-markup-language)
+> used by the `communication_hub` to get the list of available actions and expressions.
+> 
+> Note that `communication_hub`, while available in binary form in the Docker image, is 
+> not open-source. Alternatively, you can also simply manually set the robot's expression 
+> by publishing on the `/robot_face/expression` topic (as we do below).
 
 
 #### Step 3: emotion mimicking game
@@ -564,8 +599,88 @@ def __init__(self):
     self._timer = self.create_timer(0.1, self.run) # check at 10Hz
 ``` 
 
+The final complete script should look like:
 
-## CHAPTER 3: Integration with LLMs
+```python
+import json
+
+from rclpy.node import Node
+from rclpy.qos import QoSProfile
+from rclpy.action import ActionClient
+
+from hri_actions_msgs.msg import Intent
+from hri_msgs.msg import Expression
+from tts_msgs.action import TTS
+from hri import HRIListener
+
+class MissionController(Node):
+
+    def __init__(self) -> None:
+        super().__init__('app_emotion_mirror')
+
+        self.get_logger().info("Initialising...")
+
+        self._intents_sub = self.create_subscription(
+            Intent,
+            '/intents',
+            self.on_intent,
+            10)
+        self.get_logger().info("Listening to %s topic" %
+                               self._intents_sub.topic_name)
+
+        self.hri_listener = HRIListener("mimic_emotion_hrilistener")
+        self.expression_pub = self.create_publisher(Expression, "/robot_face/expression", QoSProfile(depth=10))
+        self.last_expression = ""
+
+        self.tts = ActionClient(self, TTS, '/say')
+        self.tts.wait_for_server()
+
+        self._timer = self.create_timer(0.1, self.run) # check at 10Hz
+
+    def __del__(self):
+        self.get_logger().info("Destroying Mission Controller")
+        self.destroy_subscription(self._intents_sub)
+
+    def on_intent(self, msg) -> None:
+
+        self.get_logger().info("Received an intent: %s" % msg.intent)
+
+        data = json.loads(msg.data) if msg.data else {}  # noqa: F841
+        source = msg.source  # noqa: F841
+        modality = msg.modality  # noqa: F841
+        confidence = msg.confidence  # noqa: F841
+        priority_hint = msg.priority  # noqa: F841
+
+        if msg.intent == Intent.RAW_USER_INPUT:
+            self.get_logger().info(f"Processing input: {msg.intent} -> {data}")
+            goal = TTS.Goal()
+            goal.input = "I'm the famous emotion mirroring robot!"
+            self.tts.send_goal_async(goal)
+        else:
+            self.get_logger().warning("I don't know how to process intent "
+                                      "<%s>!" % msg.intent)
+    def run(self) -> None:
+
+        faces = list(self.hri_listener.faces.items())
+        if faces:
+            # only consider the first detected face
+            face_id, face = faces[0]
+            if face.expression and face.expression != self.last_expression:
+                    expression = face.expression.name.lower()
+                    print(f"Face {face_id} shows expression {expression}")
+
+                    goal = TTS.Goal()
+                    goal.input = f"you look {expression}. Same for me!"
+                    self.tts.send_goal_async(goal)
+
+                    msg = Expression()
+                    msg.expression = expression
+                    self.expression_pub.publish(msg)
+
+                    self.last_expression = face.expression
+```
+
+# CHAPTER 3: Integration with LLMs
 
 
 1. create a new `chatbot` skill using the simple chabot skill template
