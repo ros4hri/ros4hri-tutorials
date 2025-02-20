@@ -380,6 +380,9 @@ ROS 2 nodes from templates.
 >
 > As the generator tool itself does not require ROS, you can use it on any
 > machine, including eg Windows.
+>
+> Learn more about `rpk` on the [official
+> documentation](https://docs.pal-robotics.com/edge/development/rpk).
 
 ### Step 1: generating the mission controller
 
@@ -684,8 +687,9 @@ class MissionController(Node):
 
 ## CHAPTER 3: Integration with LLMs
 
+### Adding a chatbot
 
-### Step 1: creating a chatbot
+#### Step 1: creating a chatbot
 
 
 1. use `rpk` to create a new `chatbot` skill using the *basic chabot* intent
@@ -733,7 +737,7 @@ identified in the user input. For now, our basic chatbot only recognises the
 `__intent_greet__` intent when you type `Hi` or `Hello`.
 
 
-### Step 2: integrating the chatbot with the mission controller
+#### Step 2: integrating the chatbot with the mission controller
 
 
 To fully understand the intent pipeline, we will modify the chatbot to
@@ -790,27 +794,43 @@ If you now type `pick up the cup` in the chat window, you should see the chatbot
 recognising the intent and sending a `GRAB_OBJECT` intent to the mission controller.
 
 - finally, modify the mission controller function handling inbound intents,
-   in order to manage the `GREET` intent:
+   in order to manage the `GRAB_OBJECT` intent. Open
 
    ```python
     def on_intent(self, msg):
         #...
 
-        if msg.intent == Intent.RAW_USER_INPUT:
+        if msg.intent == Intent.GRAB_OBJECT:
+            # on a real robot, you would call here a manipulation skill
             goal = TTS.Goal()
-            goal.input = "<set expression(happy)> Hey there!"
+            goal.input = f"<set expression(tired)> That {data['object']} is really heavy...! <set expression(neutral)>"
             self.tts.send_goal_async(goal)
+
+        # ...
     ```
 
-4. similarly, send back an appropriate `__start_activity__` intent if the user
-   ask to 'copy expressions'. To do so, define a similar function
+Re-compile and re-run the mission controller. If you now type `pick up the cup`
+in the chat window, you should see the mission controller reacting to it.
 
+> **➡️ to go deeper**
+>
+> In this example, we directly use the `/say` skill to respond to the user.
+>
+> When developing a full application, you usually want to split your architecture
+> into multiple nodes, each responsible for a specific task.
+>
+> The PAL application model, based on the RobMoSys methodology, encourages the
+> development of a **single** *mission controller*, and a series of *tasks* and
+> *skills* that are orchestrated by the mission controller.
+>
+> You can read more about this model on the [PAL documentation
+> website](https://docs.pal-robotics.com/edge/development/intro-development).
 
-### Integrating with a Large Language Model
+### Integrating with a Large Language Model (LLM)
 
 Next, let's integrate with an LLM.
 
-#### Step 1: using `ollama`
+#### Step 1: install `ollama`
 
 `ollama` is an open-source tool that provides a simple REST API to interact with
 a variety of LLMs. It makes it easy to install different LLMs, and to call them
@@ -848,14 +868,10 @@ ollama run deepseek-r1:1.5b
 > Alternatively, you can run `ollama` on your host machine, as we will interact
 > with it via a REST API.
 
+#### Step 2: calling `ollama` from the chatbot
 
-1. Install `ollama` on your machine, download a LLM model (for instance, the small
-   `deepseek-r1:1b`) with `ollama run deepseek-r1:1b`, and start `ollama serve`.
-
-2. install the `ollama` python binding inside your Docker image: `pip install
+- install the `ollama` python binding inside your Docker image: `pip install
    ollama`.
-
-
 
 2. Modify your chatbot to connect to `ollama`, send the user input, and return
    a `__intent_say__` with the text returned by the LLM. You might need to
@@ -882,4 +898,24 @@ response = ollama.chat(model='llama3.2:1b', messages=[
 ])
 print(response['message']['content'])
 ```
+
+
+## Next steps
+
+We have completed a simple social robot architecture, with a mission controller
+that can react to user intents, and a chatbot that can extract intents from user.
+
+You can now:
+
+- **Extend the mission controller**: add more intents, more complex behaviours,
+  etc;
+- **Structure your application**: split your mission controller into tasks and
+  skills, and orchestrate them;
+- **Integrate navigation and manipulation**, using the corresponding
+  [navigation
+  skills](https://docs.pal-robotics.com/edge/navigation/skills_list) and
+  [manipulation
+  skills](https://docs.pal-robotics.com/edge/manipulation/skills_list)
+- Finally, **deploy your application** on a real robot. For PAL robots, you can use the
+  [PAL Robotics' tools](https://docs.pal-robotics.com/edge/development/deploy-code);
 
