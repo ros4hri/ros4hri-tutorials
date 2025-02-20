@@ -3,6 +3,10 @@
 
 @import "{{ site.theme }}";
 
+body {
+    font-size: 16pt;
+}
+
 .inner {
   max-width: 75%;
 }
