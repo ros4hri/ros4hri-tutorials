@@ -1,3 +1,5 @@
+![Horizon Europe ARISE and TRAIL logos](../images/logos.svg)
+
 # From Zero to an Interactive Social Robot using ROS4HRI and LLMs
 
 > **‼️ this is a ROS 2 tutorial**
