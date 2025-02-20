@@ -7,8 +7,8 @@
 > For ROS 1, you can check a similar tutorial
 > [here](../intro-ros4hri-devcontainers/)
 
-{% include toc.html html=content h_min=2 %}
 
+{:toc}
 
 Welcome!
 
