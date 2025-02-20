@@ -8,8 +8,6 @@
 > [here](../intro-ros4hri-devcontainers/)
 
 
-{:toc}
-
 Welcome!
 
 This tutorial will guide you through the installation and use of the ROS4HRI
