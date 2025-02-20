@@ -7,6 +7,9 @@
 > For ROS 1, you can check a similar tutorial
 > [here](../intro-ros4hri-devcontainers/)
 
+{% include toc.html html=content h_min=2 %}
+
+
 Welcome!
 
 This tutorial will guide you through the installation and use of the ROS4HRI
