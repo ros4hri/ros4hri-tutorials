@@ -281,7 +281,7 @@ Finally, it launches `rqt` with two custom plugins:
 
 The next figure shows the architecture of the interaction simulator:
 
-![Interaction simulator architecture](images/interaction-simulator-architecture.png)
+![Interaction simulator architecture](images/interaction-simulator-architecture.svg)
 
 ### Using the simulator to add symbolic knowledge
 
@@ -311,7 +311,7 @@ Then, open your web browser at `http://localhost:8000` to explore the knowledge 
 For instance, with the following scene:
 ![Scene with a sofa and a cup](images/scene_kb.png)
 
-the knowledge base will contain the following facts:
+the knowledge base will contain new facts, including:
 
 
 ![Knowledge base viewer](images/kb.png)
@@ -320,6 +320,20 @@ the knowledge base will contain the following facts:
 > 💡 the robot's own 'instance' is always called `myself` in the knowledge base.
 >
 > For instance `myself sees cup_oojnc` means that the robot sees the cup `cup_oojnc`.
+
+> 💡 as of Feb 2025, `rqt_human_radar` computes and pushes to the knowledge base
+> the following facts:
+>
+> - `<object|agent> rdf:type <class>`
+> - `myself sees <object>`
+> - `person_<id> sees <object>`
+> - `<object|agent> isIn <zone>`
+> - `<object|agent> isOn <object>`
+>
+> (note that the field of view of the robot/humans does not take walls into
+> account yet!)
+
+
 
 ### Accessing the knowledge base from Python
 
@@ -342,6 +356,14 @@ kb["* sees *"]
 
 This will return all the facts in the knowledge base that match the pattern `*
 sees *` (ie, all the objects that are seen by someone).
+
+Likewise,
+
+```python
+kb["* isIn kitchen"]
+```
+
+will return all the objects (or simulated humans) that are in the kitchen.
 
 You can also create more complex queries by passing a *list* of semantic
 patterns and using *named variables*:
@@ -1139,16 +1161,478 @@ actual_prompt = Template(PROMPT).safe_substitute(robot_name="Robbie", user_id="A
 Then, you can use this prompt in the `ollama` call:
 
 ```python
+# ...
+
+def __init(self) -> None:
+
+    # ...
+    
+    self.messages = [
+        {"role": "system",
+            "content": Template(PROMPT).safe_substitute(robot_name="Robbie", user_id="user1")
+            }]
+
+    # ...
+```
 
 #### Closing the loop: integrating LLM and symbolic knowledge representation
 
 Finally, we can use the knowledge base to improve the intent recognition.
 
 For instance, if the user asks the robot to `bring the apple`, we can use the
-knowledge base to check whether the apple is in the field of view of the robot,
+knowledge base to check whether an apple is in the field of view of the robot.
+
+
+> 💡 it is often convenient to have a Python interpreter open to quickly
+> test knowledge base queries.
+>
+> Open `ipython3` in a terminal from within your Docker image, and then:
+>
+> ```python
+> from knowledge_core.api import KB; kb = KB()
+> kb["* sees *"] # etc.
+> ```
+
+First, let's query the knowledge base for all the objects that are visible to the robot:
+
+```python
+from knowledge_core.api import KB
+
+# ...
+
+def __init__(self) -> None:
+
+    # ...
+
+    self.kb = KB()
+
+
+def environment(self) -> str:
+    """ fetch all the objects and humans visible to the robot,
+    get for each of them their class and label, and return a string
+    that list them all.
+    """
+
+    environment_description = ""
+
+    seen_objects = self.kb["myself sees ?obj"]
+    for obj in [item["obj"] for item in seen_objects]:
+        details= self.kb.details(obj)
+        label= details["label"]["default"]
+        classes= details["attributes"][0]["values"]
+        class_name= None
+        if classes:
+                class_name= classes[0]["label"]["default"]
+                environment_description += f"- I see a {class_name} labeled {label}.\n"
+        else:
+            environment_description += f"- I see {label}.\n"
+
+    self.get_logger().info(
+        f"Environment description:\n{environment_description}")
+    return environment_description
+```
+
+> 💡 the `kb.details` method returns a dictionary with details about a given
+> knowledge concept. The `attributes` field contains e.g. the class of the
+> object (if known or inferred by the knowledg base).
+
+
+> **➡️ to go deeper**
+>
+> To inspect in details the knowledge base, we recommend using [Protégé](https://protege.stanford.edu/), an open-source tool to explore and modify ontologies.
+>
+> The ontology used by the robot (and the interaction simulator) is stored in
+> `/opt/pal/alum/share/oro/ontologies/oro.owl`. Copy this file to your `~/exchange`
+> folder to access it from your host and inspect it with Protégé.
+
+
+We can then use this information to ground the user intents in the physical world
+of the robot.
+
+First, add the following two lines at the end of your prompt template:
+
+```
+This is a description of the environment:
+
+$environment
+```
+
+Then, add a new method to your chatbot to generate the prompt:
+
+```python
+def __init__(self) -> None:
+
+    # ...
+
+    self.messages = [
+        {"role": "system",
+            "content": self.prepare_prompt("user1")
+            }]
+
+    # ...
+
+def prepare_prompt(self, user_id: str) -> str:
+
+    environment = self.environment()
+
+    return Template(PROMPT).safe_substitute(robot_name="Robbie",
+                                            environment=environment,
+                                            user_id=user_id)
+```
+
+You could also call the `environment` method before each call to the LLM, to get the latest environment description.
+
+Re-compile and restart your chatbot. You can now ask the robot e.g. what it sees.
+
+The final chatbot code should look like:
+
+```python
+import json
+from ollama import Client
+
+from knowledge_core.api import KB
+
+from rclpy.lifecycle import Node
+from rclpy.lifecycle import State
+from rclpy.lifecycle import TransitionCallbackReturn
+from rcl_interfaces.msg import ParameterDescriptor
+from rclpy.action import ActionServer, GoalResponse
+
+from chatbot_msgs.srv import GetResponse, ResetModel
+from hri_actions_msgs.msg import Intent
+from i18n_msgs.action import SetLocale
+from i18n_msgs.srv import GetLocales
+
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+
+from pydantic import BaseModel
+from typing import Literal
+from hri_actions_msgs.msg import Intent
+from string import Template
+
+PROMPT = """
+You are a friendly robot called $robot_name. You try to help the user to the best of your abilities.
+You are always helpful, and ask further questions if the desires of the user are unclear.
+Your answers are always polite yet concise and to-the-point.
+
+Your aim is to extract the user goal.
+
+Your response must be a JSON object with the following fields (both are optional):
+- verbal_ack: a string acknowledging the user request (like 'Sure', 'I'm on it'...)
+- user_intent: the user overall goal (intent), with the following fields:
+  - type: the type of intent to perform (e.g. "__intent_say__", "__intent_greet__", "__intent_start_activity__", etc.)
+  - any thematic role required by the intent. For instance: `object` to
+    relate the intent to the object to interact with (e.g. "lamp",
+    "door", etc.)
+
+Importantly, `verbal_ack` is meant to be a *short* acknowledgement sentence,
+unconditionally uttered by the robot, indicating that you have understood the request -- or that we need more information.
+For more complex verbal actions, return a `__intent_say__` instead.
+
+However, for answers to general questions that do not require any action
+(eg: 'what is your name?'), the 'user_intent' field can be omitted, and the
+'verbal_ack' field should contain the answer.
+
+The user_id of the person you are talking to is $user_id. Always use this ID when referring to the person in your responses.
+
+Examples
+- if the user says 'Hello robot', you could respond:
+{
+    "user_intent": {"type": "__intent_greet__", "recipient": "$user_id"}
+}
+
+- if the user says 'What is your name?', you could respond:
+{
+    "verbal_ack":"My name is $robot_name. What is your name?"
+}
+
+- if the user say 'take a fruit', you could respond (assuming a object 'apple1' of type 'Apple' is visible):
+{
+    "user_intent": {
+            "type":"__intent_grab_object__",
+            "object":"apple1",
+    },
+    "verbal_ack": "Sure"
+}
+
+- if the user say 'take a fruit', but you do not know about any fruit. You could respond:
+{
+    "verbal_ack": "I haven't seen any fruits around. Do you want me to check in the kitchen?"
+}
+
+- the user says: 'clean the table'. You could return:
+{
+    "user_intent": {
+        "type":"__intent_start_activity__",
+        "object": "cleaning_table"
+    },
+    "verbal_ack": "Sure, I'll get started"
+}
+
+If you are not sure about the intention of the user, return an empty user_intent and ask for confirmation with the verbal_ack field.
+
+This is a description of the environment:
+
+$environment
+"""
+
+
+# Define the data models for the chatbot response and the user intent
+class IntentModel(BaseModel):
+    type: Literal[Intent.BRING_OBJECT,
+                  Intent.GRAB_OBJECT,
+                  Intent.PLACE_OBJECT,
+                  Intent.GUIDE,
+                  Intent.MOVE_TO,
+                  Intent.SAY,
+                  Intent.GREET,
+                  Intent.START_ACTIVITY,
+                  ]
+    object: str | None
+    recipient: str | None
+    input: str | None
+    goal: str | None
+
+
+class ChatbotResponse(BaseModel):
+    verbal_ack: str | None
+    user_intent: IntentModel | None
+##################################################
+
+class IntentExtractorImpl(Node):
+
+    def __init__(self) -> None:
+        super().__init__('intent_extractor_chatbot')
+
+        # Declare ROS parameters. Should mimick the one listed in config/00-defaults.yaml
+        self.declare_parameter(
+            'my_parameter', "my_default_value.",
+            ParameterDescriptor(
+                description='Important parameter for my chatbot')
+        )
+
+        self.get_logger().info("Initialising...")
+
+        self._get_response_srv = None
+        self._reset_srv = None
+        self._get_supported_locales_server = None
+        self._set_default_locale_server = None
+
+        self._timer = None
+        self._diag_pub = None
+        self._diag_timer = None
+
+        self.kb = KB()
+
+        self._nb_requests = 0
+
+        self._ollama_client = Client()
+        # if ollama does not run on the local host, you can specify the host and
+        # port. For instance:
+        # self._ollama_client = Client("x.x.x.x:11434")
+
+        self.messages = [
+            {"role": "system",
+             "content": self.prepare_prompt("user1")
+             }]
+
+        self.get_logger().info('Chatbot chatbot started, but not yet configured.')
+
+    def environment(self) -> str:
+        environment_description = ""
+
+        seen_objects = self.kb["myself sees ?obj"]
+        for obj in [item["obj"] for item in seen_objects]:
+            details = self.kb.details(obj)
+            label = details["label"]["default"]
+            classes = details["attributes"][0]["values"]
+            class_name = None
+            if classes:
+                class_name = classes[0]["label"]["default"]
+                environment_description += f"- I see a {class_name} labeled {label}.\n"
+            else:
+                environment_description += f"- I see {label}.\n"
+
+        self.get_logger().info(
+            f"Environment description:\n{environment_description}")
+        return environment_description
+
+    def prepare_prompt(self, user_id: str) -> str:
+
+        environment = self.environment()
+
+        return Template(PROMPT).safe_substitute(robot_name="Robbie",
+                                                environment=environment,
+                                                user_id=user_id)
+
+    def on_get_response(self, request: GetResponse.Request, response: GetResponse.Response):
+
+        user_id = request.user_id
+        input = request.input
+
+        self.get_logger().info(
+            f"new input from {user_id}: {input}... sending it to the LLM")
+        self._nb_requests += 1
+
+        self.messages.append({"role": "user", "content": input})
+
+        llm_res = self._ollama_client.chat(
+            messages=self.messages,
+            # model="llama3.2:1b",
+            model="phi4",
+            format=ChatbotResponse.model_json_schema()
+        )
+
+        json_res = ChatbotResponse.model_validate_json(llm_res.message.content)
+
+        self.get_logger().info(f"The LLM answered: {json_res}")
+
+        verbal_ack = json_res.verbal_ack
+        if verbal_ack:
+            self.messages.append({"role": "assistant", "content": verbal_ack})
+            response.response = verbal_ack
+
+        user_intent = json_res.user_intent
+        if user_intent:
+            response.intents = [Intent(
+                intent=user_intent.type,
+                data=json.dumps(user_intent.model_dump())
+            )]
+
+        return response
+
+    def on_reset(self, request: ResetModel.Request, response: ResetModel.Response):
+        self.get_logger().info('Received reset request. Not implemented yet.')
+        return response
+
+    def on_get_supported_locales(self, request, response):
+        response.locales = []  # list of supported locales; empty means any
+        return response
+
+    def on_set_default_locale_goal(self, goal_request):
+        return GoalResponse.ACCEPT
+
+    def on_set_default_locale_exec(self, goal_handle):
+        """Change here the default locale of the chatbot."""
+        result = SetLocale.Result()
+        goal_handle.succeed()
+        return result
+
+    #################################
+    #
+    # Lifecycle transitions callbacks
+    #
+    def on_configure(self, state: State) -> TransitionCallbackReturn:
+
+        # configure and start diagnostics publishing
+        self._nb_requests = 0
+        self._diag_pub = self.create_publisher(
+            DiagnosticArray, '/diagnostics', 1)
+        self._diag_timer = self.create_timer(1., self.publish_diagnostics)
+
+        # start advertising supported locales
+        self._get_supported_locales_server = self.create_service(
+            GetLocales, "~/get_supported_locales", self.on_get_supported_locales)
+
+        self._set_default_locale_server = ActionServer(
+            self, SetLocale, "~/set_default_locale",
+            goal_callback=self.on_set_default_locale_goal,
+            execute_callback=self.on_set_default_locale_exec)
+
+        self.get_logger().info("Chatbot chatbot is configured, but not yet active")
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_activate(self, state: State) -> TransitionCallbackReturn:
+        """
+        Activate the node.
+
+        You usually want to do the following in this state:
+        - Create and start any timers performing periodic tasks
+        - Start processing data, and accepting action goals, if any
+
+        """
+        self._get_response_srv = self.create_service(
+            GetResponse, '/chatbot/get_response', self.on_get_response)
+        self._reset_srv = self.create_service(
+            ResetModel, '/chatbot/reset', self.on_reset)
+
+        # Define a timer that fires every second to call the run function
+        timer_period = 1  # in sec
+        self._timer = self.create_timer(timer_period, self.run)
+
+        self.get_logger().info("Chatbot chatbot is active and running")
+        return super().on_activate(state)
+
+    def on_deactivate(self, state: State) -> TransitionCallbackReturn:
+        """Stop the timer to stop calling the `run` function (main task of your application)."""
+        self.get_logger().info("Stopping chatbot...")
+
+        self.destroy_timer(self._timer)
+        self.destroy_service(self._get_response_srv)
+        self.destroy_service(self._reset_srv)
+
+        self.get_logger().info("Chatbot chatbot is stopped (inactive)")
+        return super().on_deactivate(state)
+
+    def on_shutdown(self, state: State) -> TransitionCallbackReturn:
+        """
+        Shutdown the node, after a shutting-down transition is requested.
+
+        :return: The state machine either invokes a transition to the
+            "finalized" state or stays in the current state depending on the
+            return value.
+            TransitionCallbackReturn.SUCCESS transitions to "finalized".
+            TransitionCallbackReturn.FAILURE remains in current state.
+            TransitionCallbackReturn.ERROR or any uncaught exceptions to
+            "errorprocessing"
+        """
+        self.get_logger().info('Shutting down chatbot node.')
+        self.destroy_timer(self._diag_timer)
+        self.destroy_publisher(self._diag_pub)
+
+        self.destroy_service(self._get_supported_locales_server)
+        self._set_default_locale_server.destroy()
+
+        self.get_logger().info("Chatbot chatbot finalized.")
+        return TransitionCallbackReturn.SUCCESS
+
+    #################################
+
+    def publish_diagnostics(self):
+
+        arr = DiagnosticArray()
+        msg = DiagnosticStatus(
+            level=DiagnosticStatus.OK,
+            name="/intent_extractor_chatbot",
+            message="chatbot chatbot is running",
+            values=[
+                KeyValue(key="Module name", value="chatbot"),
+                KeyValue(key="Current lifecycle state",
+                         value=self._state_machine.current_state[1]),
+                KeyValue(key="# requests since start",
+                         value=str(self._nb_requests)),
+            ],
+        )
+
+        arr.header.stamp = self.get_clock().now().to_msg()
+        arr.status = [msg]
+        self._diag_pub.publish(arr)
+
+    def run(self) -> None:
+        """
+        Background task of the chatbot.
+
+        For now, we do not need to do anything here, as the chatbot is
+        event-driven, and the `on_user_input` callback is called when a new
+        user input is received.
+        """
+        pass
+```
 
 
 ## Next steps
+
+![Interaction simulator architecture](images/interaction-simulator-architecture-final.svg)
 
 We have completed a simple social robot architecture, with a mission controller
 that can react to user intents, and a chatbot that can extract intents from user.
