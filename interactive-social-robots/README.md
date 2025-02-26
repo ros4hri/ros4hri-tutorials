@@ -2,11 +2,29 @@
 
 # From Zero to an Interactive Social Robot using ROS4HRI and LLMs
 
-> **‼️ this is a ROS 2 tutorial**
->
-> For ROS 1, you can check a similar tutorial
-> [here](../intro-ros4hri-devcontainers/)
 
+> **‼️ In you intend to 'code along' during the HRI'25 conference**
+>
+> First, you *must* have a working Docker environment on your machine.
+> As we need to access your webcam and open graphical applications from DOcker,
+> we can only provide support for a Linux host.
+>
+> **To avoid bandwidth issues during the conference, we recommend that you
+> download the Docker image and LLM models in advance**:
+>
+> - Download the tutorial Docker image:
+>
+> ```sh
+> docker pull palrobotics/public-tutorials-alum-devel:hri25
+> ``` 
+>
+> - [Install ollama](https://ollama.com/download) and download eg the `llama3.2:1b` model:
+>
+> ```sh
+> ollama run llama3.2:1b
+> ```
+>
+> See you soon!
 
 Welcome!
 
@@ -22,11 +40,6 @@ application templates, and a LLM backend.
 
 ![Social interaction simulator](../images/social-interaction-simulator.jpg)
 
-
-**Accompanying slides are available [here](https://docs.google.com/presentation/d/1u8cJRri3J38OIdEW79IoqLq2Tniya7Sg/edit?usp=sharing&ouid=115732286809506967228&rtpof=true&sd=true)**
-
-**Note: the content on this page is not final, and will be updated before the
-tutorial day.**
 
 ## PART 0: Preparing your environment
 
@@ -50,7 +63,7 @@ check the [official ROS 2 tutorials](https://docs.ros.org/en/jazzy/Tutorials.htm
 Fetch the `PAL tutorials` public Docker image:
 
 ```
-docker pull palrobotics/public-tutorials-alum-devel
+docker pull palrobotics/public-tutorials-alum-devel:hri25
 ```
 
 Then, run the container, with access to your webcam and your X server.
@@ -63,7 +76,7 @@ docker run -it --name ros4hri \
                -e DISPLAY=$DISPLAY \
                -v /tmp/.X11-unix:/tmp/.X11-unix \
                -v `pwd`/ros4hri-exchange:/home/user/exchange \
-               palrobotics/public-tutorials-alum-devel bash
+               palrobotics/public-tutorials-alum-devel:hri25 bash
 ```
 
 > 💡 The `--device` option is used to pass the webcam to the container, and the
