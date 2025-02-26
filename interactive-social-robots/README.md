@@ -3,7 +3,7 @@
 # From Zero to an Interactive Social Robot using ROS4HRI and LLMs
 
 
-> **‼️ In you intend to 'code along' during the HRI'25 conference**
+> **‼️ If you intend to 'code along' during the HRI'25 conference**
 >
 > First, you *must* have a working Docker environment on your machine.
 > As we need to access your webcam and open graphical applications from DOcker,
