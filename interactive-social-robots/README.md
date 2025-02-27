@@ -6,7 +6,7 @@
 > **‼️ If you intend to 'code along' during the HRI'25 conference**
 >
 > First, you *must* have a working Docker environment on your machine.
-> As we need to access your webcam and open graphical applications from DOcker,
+> As we need to access your webcam and open graphical applications from Docker,
 > we can only provide support for a Linux host.
 >
 > **To avoid bandwidth issues during the conference, we recommend that you
@@ -76,6 +76,7 @@ docker run -it --name ros4hri \
                -e DISPLAY=$DISPLAY \
                -v /tmp/.X11-unix:/tmp/.X11-unix \
                -v `pwd`/ros4hri-exchange:/home/user/exchange \
+               --net=host \
                palrobotics/public-tutorials-alum-devel:hri25 bash
 ```
 
